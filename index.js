@@ -17,7 +17,22 @@ import { GoogleGenAI } from '@google/genai';
 // 3. Wróć tutaj i w linijce poniżej ZASTĄP tekst "WLEJ_TUTAJ..." swoim kluczem.
 //    Upewnij się, że Twój klucz jest wewnątrz cudzysłowu, np. const API_KEY = "AIzaSy...De4";
 //
-const API_KEY = "WLEJ_TUTAJ_SWÓJ_KLUCZ_API";
+const API_KEY = curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+  -H 'Content-Type: application/json' \
+  -H 'X-goog-api-key: GEMINI_API_KEY' \
+  -X POST \
+  -d '{
+    "contents": [
+      {
+        "parts": [
+          {
+            "text": "Explain how AI works in a few words"
+          }
+        ]
+      }
+    ]
+  }'
+;
 // ===================================================================================
 
 
