@@ -462,7 +462,7 @@ function startMemoryGame() {
                 card1.classList.remove('flipped', 'shake');
                 card2.classList.remove('flipped', 'shake');
                 flippedCards = [];
-            }, 1000);
+            }, 1500);
         }
     }
 }
@@ -613,9 +613,25 @@ function createProverbGameView() {
         { start: 'Darowanemu koniowi', correct: 'w zęby się nie zagląda', incorrect: ['grzywy się nie czesze', 'siodła się nie kupuje', 'dziękuje się grzecznie'] },
     ];
     let currentProverb;
+    let recentlyUsed = [];
 
     function newProverb() {
-        currentProverb = proverbs[Math.floor(Math.random() * proverbs.length)];
+        // Find a proverb that hasn't been used recently
+        let availableProverbs = proverbs.filter(p => !recentlyUsed.includes(p.start));
+        if (availableProverbs.length === 0) {
+            // If all have been used, reset the recent list but keep the last one
+            recentlyUsed = [currentProverb.start];
+            availableProverbs = proverbs.filter(p => !recentlyUsed.includes(p.start));
+        }
+        
+        currentProverb = availableProverbs[Math.floor(Math.random() * availableProverbs.length)];
+        recentlyUsed.push(currentProverb.start);
+        
+        // Keep the list of recently used short, e.g., half the total length
+        if (recentlyUsed.length > proverbs.length / 2) {
+            recentlyUsed.shift();
+        }
+
         proverbDisplay.textContent = currentProverb.start + ' ...';
         statusDisplay.textContent = '';
         
@@ -877,4 +893,5 @@ function initializeApp() {
     }
 }
 
-initializeApp();
+initializeApp();--- START OF FILE index.tsx ---
+// This file is intentionally blank.
