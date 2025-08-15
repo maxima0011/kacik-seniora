@@ -4,10 +4,36 @@
  */
 import { GoogleGenAI } from '@google/genai';
 
-// --- KONFIGURACJA ---
-// 1. Wejdź na stronę https://aistudio.google.com/app/apikey i skopiuj swój klucz API.
-// 2. Wklej swój klucz poniżej, wewnątrz cudzysłowu, zastępując tekst "WLEJ_TUTAJ_SWÓJ_KLUCZ_API".
+// ===================================================================================
+// WAŻNY KROK: Naprawienie funkcji "Ciekawostka na dziś"
+// ===================================================================================
+// Twoja aplikacja jest gotowa, ale funkcja ciekawostek potrzebuje "specjalnego hasła"
+// (klucza API), aby połączyć się z usługą Google AI. Bez niego nie zadziała.
+//
+// Jak to naprawić w 30 sekund:
+//
+// 1. Wejdź na stronę -> https://aistudio.google.com/app/apikey
+// 2. Kliknij "Create API key in new project" i skopiuj swój klucz.
+// 3. Wróć tutaj i w linijce poniżej ZASTĄP tekst "WLEJ_TUTAJ..." swoim kluczem.
+//    Upewnij się, że Twój klucz jest wewnątrz cudzysłowu, np. const API_KEY = "AIzaSy...De4";
+//
 const API_KEY = "WLEJ_TUTAJ_SWÓJ_KLUCZ_API";
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+  -H 'Content-Type: application/json' \
+  -H 'X-goog-api-key: GEMINI_API_KEY' \
+  -X POST \
+  -d '{
+    "contents": [
+      {
+        "parts": [
+          {
+            "text": "Explain how AI works in a few words"
+          }
+        ]
+      }
+    ]
+  }'
+// ===================================================================================
 
 
 // --- STATE MANAGEMENT ---
@@ -29,7 +55,7 @@ if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
 
 async function fetchDailyFact() {
     if (!ai) {
-        state.dailyFact = "Klucz API nie został dodany. Wklej klucz w pliku index.js, aby włączyć tę funkcję.";
+        state.dailyFact = "Klucz API nie został dodany. Postępuj zgodnie z instrukcją na górze pliku index.js, aby włączyć tę funkcję.";
         state.factLoading = false;
         render();
         return;
@@ -44,7 +70,7 @@ async function fetchDailyFact() {
         state.dailyFact = response.text;
     } catch (error) {
         console.error("Błąd podczas pobierania ciekawostki:", error);
-        state.dailyFact = "Nie udało się dziś pobrać ciekawostki. Spróbuj ponownie później.";
+        state.dailyFact = "Nie udało się dziś pobrać ciekawostki. Sprawdź, czy klucz API jest poprawny. Spróbuj ponownie później.";
     } finally {
         state.factLoading = false;
         render();
