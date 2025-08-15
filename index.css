@@ -269,3 +269,4 @@ input:focus-visible, input:focus {
 }
 @media (min-width: 601px) {
     .proverb-options { grid-template-columns: 1fr 1fr; }
+}
