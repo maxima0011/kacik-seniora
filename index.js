@@ -2,22 +2,13 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { GoogleGenAI } from '@google/genai';
 
 // ===================================================================================
-// WAŻNY KROK: Naprawienie funkcji "Ciekawostka na dziś"
+// KLUCZ API - ZOSTAŁ JUŻ DODANY
 // ===================================================================================
-// Twoja aplikacja jest gotowa, ale funkcja ciekawostek potrzebuje "specjalnego hasła"
-// (klucza API), aby połączyć się z usługą Google AI. Bez niego nie zadziała.
+// Poniżej znajduje się Twój klucz API. Został już wklejony poprawnie, w cudzysłowie.
 //
-// Jak to naprawić w 30 sekund:
-//
-// 1. Wejdź na stronę -> https://aistudio.google.com/app/apikey
-// 2. Kliknij "Create API key in new project" i skopiuj swój klucz.
-// 3. Wróć tutaj i w linijce poniżej ZASTĄP tekst "WLEJ_TUTAJ..." swoim kluczem.
-//    Upewnij się, że Twój klucz jest wewnątrz cudzysłowu, np. const API_KEY = "AIzaSy...De4";
-//
-const API_KEY = "WLEJ_TUTAJ_SWÓJ_KLUCZ_API";
+const API_KEY = "AIzaSyDh9CmaXZYKPLz4ESTuYH8aFYBeXR6mbh8";
 // ===================================================================================
 
 
@@ -26,27 +17,53 @@ const state = {
     dailyFact: '',
     factLoading: false,
     reminders: [],
+    // Zmienna przechowująca załadowaną bibliotekę, aby uniknąć wielokrotnego ładowania.
+    genAIModule: null, 
 };
 
-// --- GEMINI API SETUP ---
-let ai = null;
-if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
+/**
+ * Dynamicznie importuje i inicjuje bibliotekę GoogleGenAI.
+ * Robimy to w ten sposób, aby strona zawsze się ładowała, nawet jeśli wystąpi problem
+ * z pobraniem biblioteki lub z kluczem API.
+ * @returns {Promise<GoogleGenerativeAI | null>}
+ */
+async function getGenAI() {
+    // Jeśli biblioteka była już ładowana, użyj jej ponownie.
+    if (state.genAIModule) {
+        return state.genAIModule;
+    }
+
+    // Sprawdzenie, czy klucz API został dodany.
+    if (!API_KEY || API_KEY === "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
+        console.warn("Klucz API nie został dodany.");
+        return null;
+    }
+
     try {
-        ai = new GoogleGenAI({ apiKey: API_KEY });
+        // Dynamiczny import biblioteki.
+        const { GoogleGenAI } = await import('@google/genai');
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
+        state.genAIModule = ai; // Zapisz instancję do ponownego użycia.
+        return ai;
     } catch (error) {
-        console.error("Nie udało się zainicjować GoogleGenAI:", error);
+        console.error("Nie udało się załadować lub zainicjować biblioteki GoogleGenAI:", error);
+        return null;
     }
 }
 
 async function fetchDailyFact() {
+    state.factLoading = true;
+    render();
+
+    const ai = await getGenAI();
+
     if (!ai) {
         state.dailyFact = "Klucz API nie został dodany. Postępuj zgodnie z instrukcją na górze pliku index.js, aby włączyć tę funkcję.";
         state.factLoading = false;
         render();
         return;
     }
-    state.factLoading = true;
-    render();
+    
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -55,12 +72,17 @@ async function fetchDailyFact() {
         state.dailyFact = response.text;
     } catch (error) {
         console.error("Błąd podczas pobierania ciekawostki:", error);
-        state.dailyFact = "Nie udało się dziś pobrać ciekawostki. Sprawdź, czy klucz API jest poprawny. Spróbuj ponownie później.";
+        if (error.message && error.message.includes('API key not valid')) {
+             state.dailyFact = "Twój klucz API jest nieprawidłowy. Sprawdź, czy został poprawnie skopiowany i wklejony.";
+        } else {
+             state.dailyFact = "Nie udało się dziś pobrać ciekawostki. Może to być problem z połączeniem internetowym. Spróbuj ponownie później.";
+        }
     } finally {
         state.factLoading = false;
         render();
     }
 }
+
 
 // --- REMINDERS LOGIC ---
 function loadReminders() {
