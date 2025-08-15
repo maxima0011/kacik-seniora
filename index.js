@@ -17,7 +17,7 @@ import { GoogleGenAI } from '@google/genai';
 // 3. Wróć tutaj i w linijce poniżej ZASTĄP tekst "WLEJ_TUTAJ..." swoim kluczem.
 //    Upewnij się, że Twój klucz jest wewnątrz cudzysłowu, np. const API_KEY = "AIzaSy...De4";
 //
-const API_KEY = AIzaSyDh9CmaXZYKPLz4ESTuYH8aFYBeXR6mbh8;
+const API_KEY = "WLEJ_TUTAJ_SWÓJ_KLUCZ_API";
 // ===================================================================================
 
 
