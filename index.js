@@ -837,3 +837,5 @@ function initializeApp() {
         };
     }
 }
+
+initializeApp();
