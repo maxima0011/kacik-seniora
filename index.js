@@ -4,6 +4,12 @@
  */
 import { GoogleGenAI } from '@google/genai';
 
+// --- KONFIGURACJA ---
+// 1. Wejdź na stronę https://aistudio.google.com/app/apikey i skopiuj swój klucz API.
+// 2. Wklej swój klucz poniżej, wewnątrz cudzysłowu, zastępując tekst "WLEJ_TUTAJ_SWÓJ_KLUCZ_API".
+const API_KEY = "WLEJ_TUTAJ_SWÓJ_KLUCZ_API";
+
+
 // --- STATE MANAGEMENT ---
 const state = {
     dailyFact: '',
@@ -13,22 +19,18 @@ const state = {
 
 // --- GEMINI API SETUP ---
 let ai = null;
-try {
-    // This check prevents a ReferenceError in browser environments where 'process' is not defined.
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    } else {
-        console.warn("API Key not found in environment. Gemini features will be disabled.");
+if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
+    try {
+        ai = new GoogleGenAI({ apiKey: API_KEY });
+    } catch (error) {
+        console.error("Nie udało się zainicjować GoogleGenAI:", error);
     }
-} catch (error) {
-    console.error("Failed to initialize GoogleGenAI:", error);
-    // ai will remain null, and the app will handle it gracefully.
 }
-
 
 async function fetchDailyFact() {
     if (!ai) {
-        state.dailyFact = "Nie można połączyć się z usługą ciekawostek, ponieważ klucz API nie jest skonfigurowany.";
+        state.dailyFact = "Klucz API nie został dodany. Wklej klucz w pliku index.js, aby włączyć tę funkcję.";
+        state.factLoading = false;
         render();
         return;
     }
@@ -41,7 +43,7 @@ async function fetchDailyFact() {
         });
         state.dailyFact = response.text;
     } catch (error) {
-        console.error("Error fetching daily fact:", error);
+        console.error("Błąd podczas pobierania ciekawostki:", error);
         state.dailyFact = "Nie udało się dziś pobrać ciekawostki. Spróbuj ponownie później.";
     } finally {
         state.factLoading = false;
@@ -821,6 +823,10 @@ function createBackToTopButton() {
 
 // --- INITIALIZATION ---
 function initializeApp() {
+    if (!root) {
+        console.error("Nie znaleziono elementu #root. Aplikacja nie może wystartować.");
+        return;
+    }
     createFullUI();
     fetchDailyFact();
     loadReminders();
