@@ -22,13 +22,13 @@ const state = {
 
 // --- GEMINI API SETUP ---
 let ai = null;
-// Sprawdzamy, czy biblioteka Google załadowała się poprawnie
-if (window.GoogleGenAI) {
+// Sprawdzamy, czy biblioteka Google załadowała się poprawnie i czy jest dostępna pod właściwą ścieżką
+if (window.google && window.google.generativeai) {
     // Sprawdzamy, czy klucz API został wklejony
     if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
         try {
-            // Używamy globalnie dostępnej klasy po załadowaniu skryptu
-            ai = new window.GoogleGenAI({ apiKey: API_KEY });
+            // Używamy POPRAWNEJ, globalnie dostępnej klasy po załadowaniu skryptu
+            ai = new google.generativeai.GoogleGenerativeAI(API_KEY);
         } catch (error) {
             console.error("Nie udało się zainicjować GoogleGenAI:", error);
             // ai pozostaje null, aplikacja będzie działać dalej
@@ -49,11 +49,11 @@ async function fetchDailyFact() {
     state.factLoading = true;
     render();
     try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: 'Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.',
-        });
-        state.dailyFact = response.text;
+        // Poprawka: Używamy teraz poprawnej metody do generowania treści
+        const model = ai.getGenerativeModel({ model: "gemini-1.0-pro-latest" });
+        const result = await model.generateContent('Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.');
+        const response = await result.response;
+        state.dailyFact = response.text();
     } catch (error) {
         console.error("Błąd podczas pobierania ciekawostki:", error);
         if (error.message && error.message.includes('API key not valid')) {
@@ -461,59 +461,282 @@ function createCheckersView() {
     const container = document.createElement('div');
     container.className = 'game-container checkers-container';
 
+    const gameArea = document.createElement('div');
     const difficultySelector = document.createElement('div');
     difficultySelector.className = 'difficulty-selector';
-    const statusDisplay = document.createElement('p');
-    statusDisplay.className = 'game-status';
+    
+    const createGameBoard = () => {
+        gameArea.innerHTML = ''; // Clear previous content (like difficulty selector)
+        
+        const statusDisplay = document.createElement('p');
+        statusDisplay.className = 'game-status';
+        
+        const board = document.createElement('div');
+        board.className = 'checkers-board';
+        
+        const newGameButton = createButton('Nowa Gra (zmień poziom)', () => {
+            const newView = createCheckersView();
+            container.innerHTML = '';
+            container.appendChild(newView);
+        });
+        newGameButton.style.marginTop = '1rem';
 
-    const board = document.createElement('div');
-    board.className = 'checkers-board';
+        gameArea.append(statusDisplay, board, newGameButton);
+        return { statusDisplay, board };
+    };
 
-    const gameArea = document.createElement('div');
+    const startGame = (difficulty) => {
+        const { statusDisplay, board } = createGameBoard();
 
-    function startGame(difficulty) {
-        // Implementation of checkers game logic will go here
-        gameArea.innerHTML = '';
-        statusDisplay.textContent = 'Twoja kolej (białe)';
-        container.append(statusDisplay, board, createButton('Nowa Gra', () => createCheckersView()));
+        let boardState = [];
+        let currentPlayer = 'white'; // White always starts
+        let selectedPiece = null; // { row, col, element }
+        let isGameOver = false;
+        let mustCapture = false;
 
-        // Checkers game logic would be complex and extensive.
-        // For this example, a simplified placeholder is provided.
-        initializeBoard(difficulty);
-    }
+        const initializeBoard = () => {
+            board.innerHTML = '';
+            boardState = [];
+            for (let row = 0; row < 8; row++) {
+                boardState[row] = [];
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `checkers-square ${((row + col) % 2 === 0) ? 'light' : 'dark'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    let piece = null;
+                    if ((row + col) % 2 !== 0) {
+                        if (row < 3) piece = { player: 'black', isKing: false };
+                        else if (row > 4) piece = { player: 'white', isKing: false };
+                    }
+                    boardState[row][col] = piece;
+                    board.appendChild(square);
+                }
+            }
+        };
 
-    function initializeBoard(difficulty) {
-        board.innerHTML = '';
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const square = document.createElement('div');
-                square.className = `checkers-square ${((row + col) % 2 === 0) ? 'light' : 'dark'}`;
-                square.dataset.row = row;
-                square.dataset.col = col;
+        const renderBoard = () => {
+            const squares = board.querySelectorAll('.checkers-square');
+            squares.forEach(square => {
+                square.innerHTML = '';
+                square.onclick = null;
+                square.classList.remove('selected', 'valid-move');
 
-                if ((row + col) % 2 !== 0) {
-                    if (row < 3) {
-                        const piece = document.createElement('div');
-                        piece.className = 'piece black-piece';
-                        square.appendChild(piece);
-                    } else if (row > 4) {
-                        const piece = document.createElement('div');
-                        piece.className = 'piece white-piece';
-                        square.appendChild(piece);
+                const row = parseInt(square.dataset.row);
+                const col = parseInt(square.dataset.col);
+                const piece = boardState[row][col];
+                
+                if (piece) {
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = `piece ${piece.player}-piece`;
+                    if (piece.isKing) pieceElement.classList.add('king');
+                    square.appendChild(pieceElement);
+
+                    if (piece.player === currentPlayer) {
+                        square.onclick = () => onPieceClick(row, col, square);
+                    }
+                } else if(selectedPiece){
+                     square.onclick = () => onSquareClick(row, col);
+                }
+            });
+            updateStatus();
+        };
+        
+        const onPieceClick = (row, col, element) => {
+            if (isGameOver || currentPlayer === 'black') return;
+            
+            const piece = boardState[row][col];
+            if (piece && piece.player === currentPlayer) {
+                const captureMoves = getPossibleMoves(row, col, true);
+                const regularMoves = getPossibleMoves(row, col, false);
+
+                // Check for mandatory capture
+                const allCaptureMoves = getAllPlayerMoves(currentPlayer, true);
+                if (allCaptureMoves.length > 0 && captureMoves.length === 0) {
+                    statusDisplay.textContent = 'Bicie jest obowiązkowe!';
+                    return;
+                }
+                
+                selectedPiece = { row, col, element };
+                renderBoard(); // Re-render to clear previous highlights
+                element.classList.add('selected');
+                
+                const movesToHighlight = allCaptureMoves.length > 0 ? captureMoves : regularMoves;
+
+                movesToHighlight.forEach(move => {
+                    const targetSquare = board.querySelector(`[data-row='${move.toRow}'][data-col='${move.toCol}']`);
+                    if (targetSquare) targetSquare.classList.add('valid-move');
+                });
+            }
+        };
+
+        const onSquareClick = (row, col) => {
+            if (!selectedPiece || isGameOver) return;
+            
+            const moves = getAllPlayerMoves(currentPlayer, true).length > 0 ? getPossibleMoves(selectedPiece.row, selectedPiece.col, true) : getPossibleMoves(selectedPiece.row, selectedPiece.col, false);
+            const move = moves.find(m => m.toRow === row && m.toCol === col);
+
+            if (move) {
+                movePiece(selectedPiece.row, selectedPiece.col, row, col, move.capture);
+                selectedPiece = null;
+                
+                const hasMoreCaptures = move.capture && getPossibleMoves(row, col, true).length > 0;
+
+                if (hasMoreCaptures) {
+                    currentPlayer = 'white'; // Stay as white player for multi-capture
+                    onPieceClick(row, col, board.querySelector(`[data-row='${row}'][data-col='${col}']`))
+                } else {
+                    promoteToKing(row, col);
+                    currentPlayer = 'black';
+                    renderBoard();
+                    setTimeout(computerMove, 500);
+                }
+            } else {
+                selectedPiece = null;
+                renderBoard(); // Deselect
+            }
+        };
+
+        const movePiece = (fromRow, fromCol, toRow, toCol, capture) => {
+            boardState[toRow][toCol] = boardState[fromRow][fromCol];
+            boardState[fromRow][fromCol] = null;
+            if (capture) {
+                const capturedRow = (fromRow + toRow) / 2;
+                const capturedCol = (fromCol + toCol) / 2;
+                boardState[capturedRow][capturedCol] = null;
+            }
+        };
+        
+        const promoteToKing = (row, col) => {
+            const piece = boardState[row][col];
+            if(piece){
+                if(piece.player === 'white' && row === 0) piece.isKing = true;
+                if(piece.player === 'black' && row === 7) piece.isKing = true;
+            }
+        };
+
+        const getPossibleMoves = (row, col, captureOnly) => {
+            const moves = [];
+            const piece = boardState[row][col];
+            if (!piece) return moves;
+
+            const dirs = piece.isKing ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : (piece.player === 'white' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
+
+            for (const [dr, dc] of dirs) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+
+                // Regular move
+                if (!captureOnly && isValidSquare(newRow, newCol) && !boardState[newRow][newCol]) {
+                    moves.push({ toRow: newRow, toCol: newCol, capture: false });
+                }
+
+                // Capture move
+                const jumpRow = row + 2 * dr;
+                const jumpCol = col + 2 * dc;
+                if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol] && isValidSquare(newRow, newCol) && boardState[newRow][newCol] && boardState[newRow][newCol].player !== piece.player) {
+                    moves.push({ toRow: jumpRow, toCol: jumpCol, capture: true });
+                }
+            }
+            return moves;
+        };
+        
+        const getAllPlayerMoves = (player, captureOnly) => {
+            const allMoves = [];
+            for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    const piece = boardState[r][c];
+                    if(piece && piece.player === player){
+                        allMoves.push(...getPossibleMoves(r, c, captureOnly));
                     }
                 }
-                board.appendChild(square);
             }
+            return allMoves;
+        };
+
+        const isValidSquare = (row, col) => row >= 0 && row < 8 && col >= 0 && col < 8;
+
+        const computerMove = () => {
+            if(isGameOver) return;
+            
+            let allMoves = getAllPlayerMoves('black', true);
+            if(allMoves.length === 0){
+                allMoves = getAllPlayerMoves('black', false);
+            }
+            
+            if(allMoves.length === 0){
+                isGameOver = true;
+                statusDisplay.textContent = "Gratulacje, wygrałeś!";
+                return;
+            }
+
+            let bestMove;
+            if (difficulty === 'Łatwy') {
+                bestMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+            } else if (difficulty === 'Średni') {
+                const captureMoves = allMoves.filter(m => m.capture);
+                bestMove = captureMoves.length > 0 ? captureMoves[Math.floor(Math.random() * captureMoves.length)] : allMoves[Math.floor(Math.random() * allMoves.length)];
+            } else { // Trudny
+                // Simple heuristic: prioritize captures, then moves that lead to kinging, then random
+                const captureMoves = allMoves.filter(m => m.capture);
+                if (captureMoves.length > 0) {
+                     bestMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
+                } else {
+                    const kingMoves = allMoves.filter(m => m.toRow === 7);
+                    bestMove = kingMoves.length > 0 ? kingMoves[0] : allMoves[Math.floor(Math.random() * allMoves.length)];
+                }
+            }
+
+            const pieceToMove = findPieceForMove(bestMove, 'black');
+            if(pieceToMove){
+                movePiece(pieceToMove.row, pieceToMove.col, bestMove.toRow, bestMove.toCol, bestMove.capture);
+                promoteToKing(bestMove.toRow, bestMove.toCol);
+                
+                const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol, true).length > 0;
+                if(hasMoreCaptures) {
+                    setTimeout(computerMove, 500); // Recursive call for multi-jump
+                } else {
+                    currentPlayer = 'white';
+                    renderBoard();
+                }
+            }
+             if(getAllPlayerMoves('white', false).length === 0 && getAllPlayerMoves('white', true).length === 0){
+                isGameOver = true;
+                statusDisplay.textContent = "Niestety, komputer wygrał.";
+            }
+        };
+        
+        const findPieceForMove = (move, player) => {
+             for(let r=0; r<8; r++){
+                for(let c=0; c<8; c++){
+                    const piece = boardState[r][c];
+                    if(piece && piece.player === player){
+                        const moves = getPossibleMoves(r, c, move.capture);
+                        if(moves.some(m => m.toRow === move.toRow && m.toCol === move.toCol)){
+                            return {row: r, col: c};
+                        }
+                    }
+                }
+            }
+            return null;
         }
-        statusDisplay.textContent = `Warcaby - Poziom: ${difficulty}. Gra w trakcie implementacji.`;
-    }
+
+        const updateStatus = () => {
+            if(isGameOver) return;
+            statusDisplay.textContent = currentPlayer === 'white' ? 'Twoja kolej (białe)' : 'Kolej komputera (czarne)';
+        };
+
+        initializeBoard();
+        renderBoard();
+    };
 
     const easyBtn = createButton('Łatwy', () => startGame('Łatwy'));
     const mediumBtn = createButton('Średni', () => startGame('Średni'));
     const hardBtn = createButton('Trudny', () => startGame('Trudny'));
     difficultySelector.append(easyBtn, mediumBtn, hardBtn);
     
-    container.appendChild(difficultySelector);
+    gameArea.appendChild(difficultySelector);
     container.appendChild(gameArea);
 
     return container;
@@ -535,13 +758,20 @@ function createEnglishLearningView() {
         { pl: 'Pies', en: 'Dog', options: ['Cat', 'Fish', 'Lion'] },
         { pl: 'Dom', en: 'House', options: ['Home', 'Car', 'Tree'] },
         { pl: 'Woda', en: 'Water', options: ['Fire', 'Milk', 'Wine'] },
-        { pl: 'Chleb', en: 'Bread', options: ['Butter', 'Cheese', 'Ham'] }
+        { pl: 'Chleb', en: 'Bread', options: ['Butter', 'Cheese', 'Ham'] },
+        { pl: 'Słońce', en: 'Sun', options: ['Moon', 'Star', 'Sky'] },
+        { pl: 'Książka', en: 'Book', options: ['Paper', 'Pen', 'Desk'] },
+        { pl: 'Jabłko', en: 'Apple', options: ['Orange', 'Banana', 'Pear'] },
+        { pl: 'Samochód', en: 'Car', options: ['Bus', 'Bike', 'Train'] },
+        { pl: 'Drzewo', en: 'Tree', options: ['Flower', 'Grass', 'Leaf'] }
     ];
 
     const sentences = [
         { pl: 'Jak się masz?', en: 'How are you?', options: ['What is your name?', 'Where are you from?', 'How old are you?'] },
         { pl: 'Dziękuję', en: 'Thank you', options: ['Please', 'Sorry', 'Excuse me'] },
-        { pl: 'Nazywam się...', en: 'My name is...', options: ['I am...', 'I have...', 'I like...'] }
+        { pl: 'Nazywam się...', en: 'My name is...', options: ['I am...', 'I have...', 'I like...'] },
+        { pl: 'Która jest godzina?', en: 'What time is it?', options: ['How much is it?', 'Where is the toilet?', 'Can you help me?'] },
+        { pl: 'Do zobaczenia wkrótce', en: 'See you soon', options: ['Good morning', 'Good night', 'Goodbye'] }
     ];
 
     function startQuiz(mode) {
@@ -647,7 +877,7 @@ function createProverbGameView() {
         { start: 'Kropla drąży', correct: 'skałę', incorrect: ['kamień', 'ziemię', 'drewno'] },
         { start: 'Mądry Polak', correct: 'po szkodzie', incorrect: ['przed szkodą', 'zawsze', 'nigdy'] },
         { start: 'Nie wszystko złoto,', correct: 'co się świeci', incorrect: ['co jest drogie', 'co jest w skarbcu', 'co jest piękne'] },
-        { start: 'Od przybytku', correct: 'głowa не boli', incorrect: ['jest radość', 'jest bogactwo', 'jest szczęście'] },
+        { start: 'Od przybytku', correct: 'głowa nie boli', incorrect: ['jest radość', 'jest bogactwo', 'jest szczęście'] },
         { start: 'Ziarnko do ziarnka,', correct: 'aż zbierze się miarka', incorrect: ['aż będzie góra', 'aż będzie dużo', 'aż będzie skarb'] },
     ];
     let currentProverb;
