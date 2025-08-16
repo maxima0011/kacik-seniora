@@ -17,53 +17,37 @@ const state = {
     dailyFact: '',
     factLoading: false,
     reminders: [],
-    // Zmienna przechowująca załadowaną bibliotekę, aby uniknąć wielokrotnego ładowania.
-    genAIModule: null, 
 };
 
-/**
- * Dynamicznie importuje i inicjuje bibliotekę GoogleGenAI.
- * Robimy to w ten sposób, aby strona zawsze się ładowała, nawet jeśli wystąpi problem
- * z pobraniem biblioteki lub z kluczem API.
- * @returns {Promise<GoogleGenerativeAI | null>}
- */
-async function getGenAI() {
-    // Jeśli biblioteka była już ładowana, użyj jej ponownie.
-    if (state.genAIModule) {
-        return state.genAIModule;
+// --- GEMINI API SETUP ---
+let ai = null;
+// Sprawdzamy, czy biblioteka Google załadowała się poprawnie
+if (window.google && window.google.generativeai) {
+    // Sprawdzamy, czy klucz API został wklejony
+    if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
+        try {
+            // Używamy globalnie dostępnej klasy po załadowaniu skryptu
+            const { GoogleGenerativeAI } = window.google.generativeai;
+            ai = new GoogleGenerativeAI({ apiKey: API_KEY });
+        } catch (error) {
+            console.error("Nie udało się zainicjować GoogleGenAI:", error);
+            // ai pozostaje null, aplikacja będzie działać dalej
+        }
     }
-
-    // Sprawdzenie, czy klucz API został dodany.
-    if (!API_KEY || API_KEY === "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
-        console.warn("Klucz API nie został dodany.");
-        return null;
-    }
-
-    try {
-        // Dynamiczny import biblioteki.
-        const { GoogleGenAI } = await import('@google/genai');
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
-        state.genAIModule = ai; // Zapisz instancję do ponownego użycia.
-        return ai;
-    } catch (error) {
-        console.error("Nie udało się załadować lub zainicjować biblioteki GoogleGenAI:", error);
-        return null;
-    }
+} else {
+    console.warn("Skrypt Google GenAI nie załadował się. Funkcja ciekawostek nie będzie dostępna.");
 }
 
+
 async function fetchDailyFact() {
-    state.factLoading = true;
-    render();
-
-    const ai = await getGenAI();
-
     if (!ai) {
-        state.dailyFact = "Klucz API nie został dodany. Postępuj zgodnie z instrukcją na górze pliku index.js, aby włączyć tę funkcję.";
+        state.dailyFact = "Klucz API nie został dodany lub jest nieprawidłowy. Postępuj zgodnie z instrukcją, aby włączyć tę funkcję.";
         state.factLoading = false;
         render();
         return;
     }
-    
+    state.factLoading = true;
+    render();
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -892,6 +876,3 @@ function initializeApp() {
         };
     }
 }
-
-initializeApp();--- START OF FILE index.tsx ---
-// This file is intentionally blank.

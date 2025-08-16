@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kącik Seniora</title>
     <link rel="stylesheet" href="index.css">
-    <script type="importmap">
-      {
-        "imports": {
-          "@google/genai": "https://esm.sh/@google/genai@^0.12.0"
-        }
-      }
-    </script>
+    <!-- Niezawodny sposób ładowania biblioteki Google AI -->
+    <script src="https://cdn.jsdelivr.net/npm/@google/generative-ai/dist/index.min.js"></script>
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="index.js"></script>
+    <!-- Zmiana sposobu ładowania skryptu aplikacji na bardziej standardowy -->
+    <script defer src="index.js"></script>
 </body>
 </html>
