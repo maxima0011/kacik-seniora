@@ -1,14 +1,12 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
+import { GoogleGenAI } from '@google/genai';
 
 // ===================================================================================
 // KLUCZ API - ZOSTAŁ JUŻ DODANY
 // ===================================================================================
-// Poniżej znajduje się Twój klucz API. Został już wklejony poprawnie, w cudzysłowie.
-//
 const API_KEY = "AIzaSyDh9CmaXZYKPLz4ESTuYH8aFYBeXR6mbh8";
 // ===================================================================================
 
@@ -22,18 +20,13 @@ const state = {
 
 // --- GEMINI API SETUP ---
 let ai = null;
-if (window.google && window.google.generativeai) {
-    if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
-        try {
-            ai = new google.generativeai.GoogleGenerativeAI(API_KEY);
-        } catch (error) {
-            console.error("Nie udało się zainicjować GoogleGenAI:", error);
-        }
+if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
+    try {
+        ai = new GoogleGenAI({ apiKey: API_KEY });
+    } catch (error) {
+        console.error("Nie udało się zainicjować GoogleGenAI:", error);
     }
-} else {
-    console.warn("Skrypt Google GenAI nie załadował się. Funkcja ciekawostek nie będzie dostępna.");
 }
-
 
 async function fetchDailyFact() {
     if (!ai) {
@@ -46,10 +39,11 @@ async function fetchDailyFact() {
     render();
     try {
         // OSTATECZNA POPRAWKA: Używamy najnowszej, poprawnej składni biblioteki Google AI
-        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-        const result = await model.generateContent('Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.');
-        const response = await result.response;
-        state.dailyFact = response.text();
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: 'Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.',
+        });
+        state.dailyFact = response.text;
     } catch (error) {
         console.error("Błąd podczas pobierania ciekawostki:", error);
         if (error.message && error.message.includes('API key not valid')) {
@@ -66,15 +60,24 @@ async function fetchDailyFact() {
 
 // --- REMINDERS LOGIC ---
 function loadReminders() {
-    const savedReminders = localStorage.getItem('reminders');
-    if (savedReminders) {
-        state.reminders = JSON.parse(savedReminders);
-        sortReminders();
+    try {
+        const savedReminders = localStorage.getItem('reminders');
+        if (savedReminders) {
+            state.reminders = JSON.parse(savedReminders);
+            sortReminders();
+        }
+    } catch (e) {
+        console.error("Błąd podczas wczytywania przypomnień:", e);
+        state.reminders = [];
     }
 }
 
 function saveReminders() {
-    localStorage.setItem('reminders', JSON.stringify(state.reminders));
+    try {
+        localStorage.setItem('reminders', JSON.stringify(state.reminders));
+    } catch (e) {
+        console.error("Błąd podczas zapisywania przypomnień:", e);
+    }
 }
 
 function sortReminders() {
@@ -328,16 +331,16 @@ function startMemoryGame() {
     const board = document.querySelector('.game-board');
     if (!board) return;
 
-    // NAPRAWIONE, STABILNE LINKI DO OBRAZKÓW Z PEWNEGO ŹRÓDŁA
+    // NAPRAWIONE, STABILNE LINKI DO OBRAZKÓW
     const ANIMAL_IMAGES = [
-        'https://images.pexels.com/photos/45201/pexels-photo-45201.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/774731/pexels-photo-774731.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/572826/pexels-photo-572826.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/39571/gorilla-silverback-animal-silvery-grey-39571.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/247502/pexels-photo-247502.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/145939/pexels-photo-145939.jpeg?auto=compress&cs=tinysrgb&h=200',
-        'https://images.pexels.com/photos/133459/pexels-photo-133459.jpeg?auto=compress&cs=tinysrgb&h=200'
+        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1529778873920-4da4926a72c2?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1583337130417-2346a1be28a1?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1596854407944-bf87f6fdd49e?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1574158622682-e40e6984100d?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1555169062-013468b47731?q=80&w=200&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=200&auto=format&fit=crop'
     ];
     const cardValues = [...ANIMAL_IMAGES, ...ANIMAL_IMAGES].sort(() => 0.5 - Math.random());
 
@@ -405,7 +408,7 @@ function createCheckersView() {
     const gameArea = document.createElement('div');
 
     const startGame = (difficulty) => {
-        gameArea.innerHTML = ''; // Clear difficulty selection
+        gameArea.innerHTML = '';
         
         const statusDisplay = document.createElement('p');
         statusDisplay.className = 'game-status';
@@ -466,7 +469,7 @@ function createCheckersView() {
                     square.appendChild(pieceElement);
 
                     if (piece.player === currentPlayer) {
-                        square.onclick = () => onPieceClick(row, col, square);
+                        square.onclick = () => onPieceClick(row, col);
                     }
                 } else if(selectedPiece){
                      square.onclick = () => onSquareClick(row, col);
@@ -475,25 +478,27 @@ function createCheckersView() {
             updateStatus();
         };
         
-        const onPieceClick = (row, col, element) => {
+        const onPieceClick = (row, col) => {
             if (isGameOver || currentPlayer === 'black') return;
             
             const piece = boardState[row][col];
             if (piece && piece.player === currentPlayer) {
-                const allCaptureMoves = getAllPlayerMoves(currentPlayer, true);
+                const allCaptureMoves = getAllPlayerMoves(currentPlayer).filter(m => m.capture);
                 if (allCaptureMoves.length > 0) {
-                    const pieceCaptureMoves = getPossibleMoves(row, col, true);
+                    const pieceCaptureMoves = getPossibleMoves(row, col).filter(m => m.capture);
                     if (pieceCaptureMoves.length === 0) {
                         statusDisplay.textContent = 'Bicie jest obowiązkowe!';
                         return;
                     }
                 }
                 
-                selectedPiece = { row, col, element };
+                selectedPiece = { row, col };
                 renderBoard(); 
-                element.classList.add('selected');
+                board.querySelector(`[data-row='${row}'][data-col='${col}']`).classList.add('selected');
                 
-                const movesToHighlight = allCaptureMoves.length > 0 ? getPossibleMoves(row, col, true) : getPossibleMoves(row, col, false);
+                const movesToHighlight = (allCaptureMoves.length > 0) 
+                    ? getPossibleMoves(row, col).filter(m => m.capture) 
+                    : getPossibleMoves(row, col);
 
                 movesToHighlight.forEach(move => {
                     const targetSquare = board.querySelector(`[data-row='${move.toRow}'][data-col='${move.toCol}']`);
@@ -505,23 +510,25 @@ function createCheckersView() {
         const onSquareClick = (row, col) => {
             if (!selectedPiece || isGameOver) return;
             
-            const moves = (getAllPlayerMoves(currentPlayer, true).length > 0) 
-                ? getPossibleMoves(selectedPiece.row, selectedPiece.col, true) 
-                : getPossibleMoves(selectedPiece.row, selectedPiece.col, false);
+            const allCaptureMoves = getAllPlayerMoves(currentPlayer).filter(m => m.capture);
+            const moves = (allCaptureMoves.length > 0) 
+                ? getPossibleMoves(selectedPiece.row, selectedPiece.col).filter(m => m.capture)
+                : getPossibleMoves(selectedPiece.row, selectedPiece.col);
 
             const move = moves.find(m => m.toRow === row && m.toCol === col);
 
             if (move) {
-                movePiece(selectedPiece.row, selectedPiece.col, row, col, move.capture);
-                selectedPiece = null;
+                movePiece(selectedPiece.row, selectedPiece.col, row, col);
                 
-                const hasMoreCaptures = move.capture && getPossibleMoves(row, col, true).length > 0;
-
+                const hasMoreCaptures = move.capture && getPossibleMoves(row, col).filter(m => m.capture).length > 0;
                 if (hasMoreCaptures) {
-                    onPieceClick(row, col, board.querySelector(`[data-row='${row}'][data-col='${col}']`));
+                    selectedPiece = { row, col };
+                    renderBoard();
+                    onPieceClick(row, col);
                     return;
                 }
                 
+                selectedPiece = null;
                 promoteToKing(row, col);
                 currentPlayer = 'black';
                 renderBoard();
@@ -532,10 +539,12 @@ function createCheckersView() {
             }
         };
 
-        const movePiece = (fromRow, fromCol, toRow, toCol, capture) => {
-            boardState[toRow][toCol] = boardState[fromRow][fromCol];
+        const movePiece = (fromRow, fromCol, toRow, toCol) => {
+            const piece = boardState[fromRow][fromCol];
+            boardState[toRow][toCol] = piece;
             boardState[fromRow][fromCol] = null;
-            if (capture) {
+            
+            if (Math.abs(fromRow - toRow) === 2) {
                 const capturedRow = (fromRow + toRow) / 2;
                 const capturedCol = (fromCol + toCol) / 2;
                 boardState[capturedRow][capturedCol] = null;
@@ -550,7 +559,7 @@ function createCheckersView() {
             }
         };
 
-        const getPossibleMoves = (row, col, captureOnly) => {
+        const getPossibleMoves = (row, col) => {
             const moves = [];
             const piece = boardState[row][col];
             if (!piece) return moves;
@@ -558,48 +567,35 @@ function createCheckersView() {
             const dirs = piece.isKing ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : (piece.player === 'white' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
 
             for (const [dr, dc] of dirs) {
-                for (let i = 1; i < (piece.isKing ? 8 : 2); i++) {
-                    const newRow = row + i * dr;
-                    const newCol = col + i * dc;
-                    
-                    if (!isValidSquare(newRow, newCol)) break;
-                    
-                    const targetPiece = boardState[newRow][newCol];
+                const newRow = row + dr;
+                const newCol = col + dc;
 
-                    if (!targetPiece) { // Regular move
-                        if (!captureOnly) moves.push({ toRow: newRow, toCol: newCol, capture: false });
-                    } else { // Possible capture
-                        if (targetPiece.player !== piece.player) {
-                            const jumpRow = newRow + dr;
-                            const jumpCol = newCol + dc;
-                            if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol]) {
-                                moves.push({ toRow: jumpRow, toCol: jumpCol, capture: true });
-                            }
+                if (isValidSquare(newRow, newCol)) {
+                    if (!boardState[newRow][newCol]) {
+                        moves.push({ toRow: newRow, toCol: newCol, capture: false });
+                    } else if (boardState[newRow][newCol].player !== piece.player) {
+                        const jumpRow = newRow + dr;
+                        const jumpCol = newCol + dc;
+                        if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol]) {
+                            moves.push({ toRow: jumpRow, toCol: jumpCol, capture: true });
                         }
-                        break;
                     }
-                    if (!piece.isKing) break;
                 }
             }
             return moves;
         };
         
-        const getAllPlayerMoves = (player, captureOnly) => {
+        const getAllPlayerMoves = (player) => {
             let allMoves = [];
             for(let r=0; r<8; r++){
                 for(let c=0; c<8; c++){
                     const piece = boardState[r][c];
                     if(piece && piece.player === player){
-                        allMoves.push(...getPossibleMoves(r, c, false));
+                        allMoves.push(...getPossibleMoves(r,c).map(move => ({...move, fromRow: r, fromCol: c})));
                     }
                 }
             }
-            if (captureOnly) {
-                return allMoves.filter(m => m.capture);
-            }
-            // If any capture move exists, only capture moves are valid
-            const anyCaptures = allMoves.some(m => m.capture);
-            return anyCaptures ? allMoves.filter(m => m.capture) : allMoves;
+            return allMoves;
         };
 
         const isValidSquare = (row, col) => row >= 0 && row < 8 && col >= 0 && col < 8;
@@ -607,9 +603,11 @@ function createCheckersView() {
         const computerMove = () => {
             if(isGameOver) return;
             
-            let allMoves = getAllPlayerMoves('black', false);
-            
-            if(allMoves.length === 0){
+            let allMoves = getAllPlayerMoves('black');
+            const captureMoves = allMoves.filter(m => m.capture);
+            const validMoves = captureMoves.length > 0 ? captureMoves : allMoves;
+
+            if(validMoves.length === 0){
                 isGameOver = true;
                 statusDisplay.textContent = "Gratulacje, wygrałeś!";
                 renderBoard();
@@ -618,57 +616,32 @@ function createCheckersView() {
 
             let bestMove;
             if (difficulty === 'Łatwy') {
-                bestMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+                bestMove = validMoves[Math.floor(Math.random() * validMoves.length)];
             } else if (difficulty === 'Średni') {
-                const captureMoves = allMoves.filter(m => m.capture);
-                bestMove = captureMoves.length > 0 ? captureMoves[Math.floor(Math.random() * captureMoves.length)] : allMoves[Math.floor(Math.random() * allMoves.length)];
+                bestMove = validMoves[Math.floor(Math.random() * validMoves.length)]; 
             } else { // Trudny
-                const captureMoves = allMoves.filter(m => m.capture);
-                 if (captureMoves.length > 0) {
-                     bestMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
-                } else {
-                    const kingMoves = allMoves.filter(m => m.toRow === 7);
-                    bestMove = kingMoves.length > 0 ? kingMoves[0] : allMoves[Math.floor(Math.random() * allMoves.length)];
-                }
+                bestMove = validMoves[Math.floor(Math.random() * validMoves.length)];
             }
+            
+            movePiece(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
+            
+            const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol).filter(m => m.capture).length > 0;
+            
+            promoteToKing(bestMove.toRow, bestMove.toCol);
 
-            const pieceToMove = findPieceForMove(bestMove, 'black');
-            if(pieceToMove){
-                movePiece(pieceToMove.row, pieceToMove.col, bestMove.toRow, bestMove.toCol, bestMove.capture);
-                
-                const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol, true).length > 0;
-                
-                promoteToKing(bestMove.toRow, bestMove.toCol);
-
-                if(hasMoreCaptures) {
-                    setTimeout(() => computerMove(), 500);
-                    return;
-                }
+            if(hasMoreCaptures) {
+                setTimeout(() => computerMove(), 500);
+                return;
             }
             
             currentPlayer = 'white';
-            if(getAllPlayerMoves('white', false).length === 0){
+            if(getAllPlayerMoves('white').length === 0){
                 isGameOver = true;
                 statusDisplay.textContent = "Niestety, komputer wygrał.";
             }
             renderBoard();
         };
         
-        const findPieceForMove = (move, player) => {
-             for(let r=0; r<8; r++){
-                for(let c=0; c<8; c++){
-                    const piece = boardState[r][c];
-                    if(piece && piece.player === player){
-                        const moves = getPossibleMoves(r, c, false);
-                        if(moves.some(m => m.toRow === move.toRow && m.toCol === move.toCol)){
-                            return {row: r, col: c};
-                        }
-                    }
-                }
-            }
-            return null;
-        }
-
         const updateStatus = () => {
             if(isGameOver) return;
             statusDisplay.textContent = currentPlayer === 'white' ? 'Twoja kolej (białe)' : 'Kolej komputera (czarne)';
