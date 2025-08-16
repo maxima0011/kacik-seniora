@@ -22,16 +22,12 @@ const state = {
 
 // --- GEMINI API SETUP ---
 let ai = null;
-// Sprawdzamy, czy biblioteka Google załadowała się poprawnie i czy jest dostępna pod właściwą ścieżką
 if (window.google && window.google.generativeai) {
-    // Sprawdzamy, czy klucz API został wklejony
     if (API_KEY && API_KEY !== "WLEJ_TUTAJ_SWÓJ_KLUCZ_API") {
         try {
-            // Używamy POPRAWNEJ, globalnie dostępnej klasy po załadowaniu skryptu
             ai = new google.generativeai.GoogleGenerativeAI(API_KEY);
         } catch (error) {
             console.error("Nie udało się zainicjować GoogleGenAI:", error);
-            // ai pozostaje null, aplikacja będzie działać dalej
         }
     }
 } else {
@@ -49,8 +45,8 @@ async function fetchDailyFact() {
     state.factLoading = true;
     render();
     try {
-        // Poprawka: Używamy teraz poprawnej metody do generowania treści
-        const model = ai.getGenerativeModel({ model: "gemini-1.0-pro-latest" });
+        // OSTATECZNA POPRAWKA: Używamy najnowszej, poprawnej składni biblioteki Google AI
+        const model = ai.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
         const result = await model.generateContent('Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.');
         const response = await result.response;
         state.dailyFact = response.text();
@@ -114,9 +110,8 @@ function deleteReminder(id) {
             state.reminders = state.reminders.filter(r => r.id !== id);
             saveReminders();
             render();
-        }, 500); // Duration must match CSS animation
+        }, 500);
     } else {
-        // Fallback for safety
         state.reminders = state.reminders.filter(r => r.id !== id);
         saveReminders();
         render();
@@ -128,21 +123,15 @@ function deleteReminder(id) {
 const root = document.getElementById('root');
 
 function render() {
-    // We only render the dynamic parts to avoid rebuilding the whole DOM
     const factContent = document.getElementById('fact-content');
     const factCard = document.querySelector('.fact-card');
 
     if (factCard) {
-        if (state.factLoading) {
-            factCard.classList.add('is-loading');
-        } else {
-            factCard.classList.remove('is-loading');
-        }
+        factCard.classList.toggle('is-loading', state.factLoading);
     }
     if (factContent) {
         factContent.textContent = state.dailyFact || 'Kliknij przycisk, aby pobrać ciekawostkę!';
     }
-
 
     const remindersList = document.querySelector('.reminders-list');
     if (remindersList) {
@@ -151,7 +140,7 @@ function render() {
 }
 
 function createFullUI() {
-    root.innerHTML = ''; // Clear previous content
+    root.innerHTML = '';
     const appContainer = document.createElement('div');
     appContainer.className = 'app-container';
 
@@ -169,19 +158,13 @@ function createFullUI() {
 function createHeader() {
     const header = document.createElement('header');
     header.className = 'app-header';
-    
-    const icon = document.createElement('div');
-    icon.className = 'header-icon';
-    icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>`;
-
-    const title = document.createElement('h1');
-    title.textContent = "Kącik Seniora";
-    
-    const welcomeMessage = document.createElement('p');
-    welcomeMessage.textContent = 'Proste, pomocne i przyjemne miejsce dla Ciebie.';
-    welcomeMessage.className = 'welcome-message';
-
-    header.append(icon, title, welcomeMessage);
+    header.innerHTML = `
+        <div class="header-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
+        </div>
+        <h1>Kącik Seniora</h1>
+        <p class="welcome-message">Proste, pomocne i przyjemne miejsce dla Ciebie.</p>
+    `;
     return header;
 }
 
@@ -190,22 +173,17 @@ function createFactSection() {
     const section = document.createElement('section');
     section.id = 'fact-section';
     section.className = 'page-section';
-
+    
     const factCard = document.createElement('div');
     factCard.className = 'card fact-card';
-    const factTitle = document.createElement('h3');
-    factTitle.textContent = '💡 Ciekawostka na dziś';
-    
-    const loader = document.createElement('div');
-    loader.className = 'loader';
-
-    const factContent = document.createElement('p');
-    factContent.id = 'fact-content';
-    factContent.textContent = state.dailyFact || 'Kliknij przycisk, aby pobrać ciekawostkę!';
-    
+    factCard.innerHTML = `
+        <h3>💡 Ciekawostka na dziś</h3>
+        <div class="loader"></div>
+        <p id="fact-content">${state.dailyFact || 'Kliknij przycisk, aby pobrać ciekawostkę!'}</p>
+    `;
     const refreshButton = createButton('Nowa ciekawostka', fetchDailyFact);
     refreshButton.className += ' small-button';
-    factCard.append(factTitle, loader, factContent, refreshButton);
+    factCard.appendChild(refreshButton);
     section.appendChild(factCard);
     return section;
 }
@@ -242,7 +220,6 @@ function createRemindersSection() {
     const title = document.createElement('h2');
     title.textContent = 'Moje Przypomnienia';
 
-    // Form for new reminder
     const formCard = document.createElement('div');
     formCard.className = 'card';
     const form = document.createElement('form');
@@ -254,30 +231,16 @@ function createRemindersSection() {
         addReminder(textInput.value, dateInput.value, timeInput.value);
         form.reset();
     };
-
-    const textInput = document.createElement('input');
-    textInput.type = 'text';
-    textInput.id = 'reminder-text';
-    textInput.placeholder = 'O czym chcesz pamiętać?';
-    textInput.setAttribute('aria-label', 'Opis przypomnienia');
-
-    const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.id = 'reminder-date';
-    dateInput.setAttribute('aria-label', 'Data przypomnienia');
-
-    const timeInput = document.createElement('input');
-    timeInput.type = 'time';
-    timeInput.id = 'reminder-time';
-    timeInput.setAttribute('aria-label', 'Godzina przypomnienia');
-
+    form.innerHTML = `
+        <input type="text" id="reminder-text" placeholder="O czym chcesz pamiętać?" aria-label="Opis przypomnienia">
+        <input type="date" id="reminder-date" aria-label="Data przypomnienia">
+        <input type="time" id="reminder-time" aria-label="Godzina przypomnienia">
+    `;
     const addButton = createButton('Dodaj przypomnienie');
     addButton.type = 'submit';
-
-    form.append(textInput, dateInput, timeInput, addButton);
+    form.appendChild(addButton);
     formCard.appendChild(form);
 
-    // List of existing reminders
     const list = document.createElement('ul');
     list.className = 'reminders-list';
     renderRemindersList(list);
@@ -289,10 +252,7 @@ function createRemindersSection() {
 function renderRemindersList(listElement) {
     listElement.innerHTML = '';
     if (state.reminders.length === 0) {
-        const emptyMessage = document.createElement('li');
-        emptyMessage.textContent = 'Nie masz ustawionych żadnych przypomnień.';
-        emptyMessage.className = 'empty-message';
-        listElement.appendChild(emptyMessage);
+        listElement.innerHTML = '<li class="empty-message">Nie masz ustawionych żadnych przypomnień.</li>';
     } else {
         state.reminders.forEach(reminder => {
             const item = document.createElement('li');
@@ -322,9 +282,7 @@ function openGameModal(gameType, title) {
     
     const modalHeader = document.createElement('div');
     modalHeader.className = 'modal-header';
-    const modalTitle = document.createElement('h2');
-    modalTitle.textContent = title;
-    modalHeader.appendChild(modalTitle);
+    modalHeader.innerHTML = `<h2>${title}</h2>`;
 
     const closeButton = createButton('X', () => document.body.removeChild(modalOverlay));
     closeButton.className = 'modal-close-btn';
@@ -333,21 +291,11 @@ function openGameModal(gameType, title) {
 
     let gameView;
     switch(gameType) {
-        case 'memory':
-            gameView = createMemoryGameView();
-            break;
-        case 'checkers':
-            gameView = createCheckersView();
-            break;
-        case 'english':
-            gameView = createEnglishLearningView();
-            break;
-        case 'proverb':
-            gameView = createProverbGameView();
-            break;
-        case 'math':
-            gameView = createMathGameView();
-            break;
+        case 'memory': gameView = createMemoryGameView(); break;
+        case 'checkers': gameView = createCheckersView(); break;
+        case 'english': gameView = createEnglishLearningView(); break;
+        case 'proverb': gameView = createProverbGameView(); break;
+        case 'math': gameView = createMathGameView(); break;
     }
     
     modalContent.append(modalHeader, gameView);
@@ -376,21 +324,20 @@ function createMemoryGameView() {
     return container;
 }
 
-// --- GAME LOGIC (MEMORY) ---
 function startMemoryGame() {
     const board = document.querySelector('.game-board');
     if (!board) return;
 
-    // NAPRAWIONE, STABILNE LINKI DO OBRAZKÓW
+    // NAPRAWIONE, STABILNE LINKI DO OBRAZKÓW Z PEWNEGO ŹRÓDŁA
     const ANIMAL_IMAGES = [
-        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&auto=format&fit=crop', // Kot
-        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200&auto=format&fit=crop', // Pies
-        'https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=200&auto=format&fit=crop', // Lis
-        'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=200&auto=format&fit=crop', // Panda
-        'https://images.unsplash.com/photo-1516934024016-1421f592580b?w=200&auto=format&fit=crop', // Wiewiórka
-        'https://images.unsplash.com/photo-1557052583-93e3651b1456?w=200&auto=format&fit=crop', // Tygrys
-        'https://images.unsplash.com/photo-1575550959103-678e7838a2b9?w=200&auto=format&fit=crop', // Lew
-        'https://images.unsplash.com/photo-1555169062-013468b47731?w=200&auto=format&fit=crop'  // Słoń
+        'https://images.pexels.com/photos/45201/pexels-photo-45201.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/1108099/pexels-photo-1108099.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/774731/pexels-photo-774731.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/572826/pexels-photo-572826.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/39571/gorilla-silverback-animal-silvery-grey-39571.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/247502/pexels-photo-247502.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/145939/pexels-photo-145939.jpeg?auto=compress&cs=tinysrgb&h=200',
+        'https://images.pexels.com/photos/133459/pexels-photo-133459.jpeg?auto=compress&cs=tinysrgb&h=200'
     ];
     const cardValues = [...ANIMAL_IMAGES, ...ANIMAL_IMAGES].sort(() => 0.5 - Math.random());
 
@@ -400,17 +347,12 @@ function startMemoryGame() {
     const movesCounter = document.getElementById('moves-counter');
     if(movesCounter) movesCounter.textContent = `Ruchy: 0`;
     
-    const existingWinMessage = board.querySelector('.game-win-message');
-    if (existingWinMessage) {
-        existingWinMessage.remove();
-    }
-
     board.innerHTML = '';
     cardValues.forEach(value => {
         const card = document.createElement('div');
         card.className = 'card-game';
         card.dataset.value = value;
-        card.innerHTML = `<span class="card-face card-front"></span><div class="card-face card-back"><img src="${value}" alt="Karta ze zwierzęciem"></div>`;
+        card.innerHTML = `<div class="card-face card-front"></div><div class="card-face card-back"><img src="${value}" alt="Karta ze zwierzęciem"></div>`;
         card.addEventListener('click', () => onCardClick(card));
         board.appendChild(card);
     });
@@ -460,13 +402,10 @@ function startMemoryGame() {
 function createCheckersView() {
     const container = document.createElement('div');
     container.className = 'game-container checkers-container';
-
     const gameArea = document.createElement('div');
-    const difficultySelector = document.createElement('div');
-    difficultySelector.className = 'difficulty-selector';
-    
-    const createGameBoard = () => {
-        gameArea.innerHTML = ''; // Clear previous content (like difficulty selector)
+
+    const startGame = (difficulty) => {
+        gameArea.innerHTML = ''; // Clear difficulty selection
         
         const statusDisplay = document.createElement('p');
         statusDisplay.className = 'game-status';
@@ -482,17 +421,11 @@ function createCheckersView() {
         newGameButton.style.marginTop = '1rem';
 
         gameArea.append(statusDisplay, board, newGameButton);
-        return { statusDisplay, board };
-    };
-
-    const startGame = (difficulty) => {
-        const { statusDisplay, board } = createGameBoard();
 
         let boardState = [];
-        let currentPlayer = 'white'; // White always starts
-        let selectedPiece = null; // { row, col, element }
+        let currentPlayer = 'white';
+        let selectedPiece = null;
         let isGameOver = false;
-        let mustCapture = false;
 
         const initializeBoard = () => {
             board.innerHTML = '';
@@ -517,8 +450,7 @@ function createCheckersView() {
         };
 
         const renderBoard = () => {
-            const squares = board.querySelectorAll('.checkers-square');
-            squares.forEach(square => {
+            board.querySelectorAll('.checkers-square').forEach(square => {
                 square.innerHTML = '';
                 square.onclick = null;
                 square.classList.remove('selected', 'valid-move');
@@ -548,21 +480,20 @@ function createCheckersView() {
             
             const piece = boardState[row][col];
             if (piece && piece.player === currentPlayer) {
-                const captureMoves = getPossibleMoves(row, col, true);
-                const regularMoves = getPossibleMoves(row, col, false);
-
-                // Check for mandatory capture
                 const allCaptureMoves = getAllPlayerMoves(currentPlayer, true);
-                if (allCaptureMoves.length > 0 && captureMoves.length === 0) {
-                    statusDisplay.textContent = 'Bicie jest obowiązkowe!';
-                    return;
+                if (allCaptureMoves.length > 0) {
+                    const pieceCaptureMoves = getPossibleMoves(row, col, true);
+                    if (pieceCaptureMoves.length === 0) {
+                        statusDisplay.textContent = 'Bicie jest obowiązkowe!';
+                        return;
+                    }
                 }
                 
                 selectedPiece = { row, col, element };
-                renderBoard(); // Re-render to clear previous highlights
+                renderBoard(); 
                 element.classList.add('selected');
                 
-                const movesToHighlight = allCaptureMoves.length > 0 ? captureMoves : regularMoves;
+                const movesToHighlight = allCaptureMoves.length > 0 ? getPossibleMoves(row, col, true) : getPossibleMoves(row, col, false);
 
                 movesToHighlight.forEach(move => {
                     const targetSquare = board.querySelector(`[data-row='${move.toRow}'][data-col='${move.toCol}']`);
@@ -574,7 +505,10 @@ function createCheckersView() {
         const onSquareClick = (row, col) => {
             if (!selectedPiece || isGameOver) return;
             
-            const moves = getAllPlayerMoves(currentPlayer, true).length > 0 ? getPossibleMoves(selectedPiece.row, selectedPiece.col, true) : getPossibleMoves(selectedPiece.row, selectedPiece.col, false);
+            const moves = (getAllPlayerMoves(currentPlayer, true).length > 0) 
+                ? getPossibleMoves(selectedPiece.row, selectedPiece.col, true) 
+                : getPossibleMoves(selectedPiece.row, selectedPiece.col, false);
+
             const move = moves.find(m => m.toRow === row && m.toCol === col);
 
             if (move) {
@@ -584,17 +518,17 @@ function createCheckersView() {
                 const hasMoreCaptures = move.capture && getPossibleMoves(row, col, true).length > 0;
 
                 if (hasMoreCaptures) {
-                    currentPlayer = 'white'; // Stay as white player for multi-capture
-                    onPieceClick(row, col, board.querySelector(`[data-row='${row}'][data-col='${col}']`))
-                } else {
-                    promoteToKing(row, col);
-                    currentPlayer = 'black';
-                    renderBoard();
-                    setTimeout(computerMove, 500);
+                    onPieceClick(row, col, board.querySelector(`[data-row='${row}'][data-col='${col}']`));
+                    return;
                 }
+                
+                promoteToKing(row, col);
+                currentPlayer = 'black';
+                renderBoard();
+                setTimeout(computerMove, 500);
             } else {
                 selectedPiece = null;
-                renderBoard(); // Deselect
+                renderBoard();
             }
         };
 
@@ -624,35 +558,48 @@ function createCheckersView() {
             const dirs = piece.isKing ? [[-1, -1], [-1, 1], [1, -1], [1, 1]] : (piece.player === 'white' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
 
             for (const [dr, dc] of dirs) {
-                const newRow = row + dr;
-                const newCol = col + dc;
+                for (let i = 1; i < (piece.isKing ? 8 : 2); i++) {
+                    const newRow = row + i * dr;
+                    const newCol = col + i * dc;
+                    
+                    if (!isValidSquare(newRow, newCol)) break;
+                    
+                    const targetPiece = boardState[newRow][newCol];
 
-                // Regular move
-                if (!captureOnly && isValidSquare(newRow, newCol) && !boardState[newRow][newCol]) {
-                    moves.push({ toRow: newRow, toCol: newCol, capture: false });
-                }
-
-                // Capture move
-                const jumpRow = row + 2 * dr;
-                const jumpCol = col + 2 * dc;
-                if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol] && isValidSquare(newRow, newCol) && boardState[newRow][newCol] && boardState[newRow][newCol].player !== piece.player) {
-                    moves.push({ toRow: jumpRow, toCol: jumpCol, capture: true });
+                    if (!targetPiece) { // Regular move
+                        if (!captureOnly) moves.push({ toRow: newRow, toCol: newCol, capture: false });
+                    } else { // Possible capture
+                        if (targetPiece.player !== piece.player) {
+                            const jumpRow = newRow + dr;
+                            const jumpCol = newCol + dc;
+                            if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol]) {
+                                moves.push({ toRow: jumpRow, toCol: jumpCol, capture: true });
+                            }
+                        }
+                        break;
+                    }
+                    if (!piece.isKing) break;
                 }
             }
             return moves;
         };
         
         const getAllPlayerMoves = (player, captureOnly) => {
-            const allMoves = [];
+            let allMoves = [];
             for(let r=0; r<8; r++){
                 for(let c=0; c<8; c++){
                     const piece = boardState[r][c];
                     if(piece && piece.player === player){
-                        allMoves.push(...getPossibleMoves(r, c, captureOnly));
+                        allMoves.push(...getPossibleMoves(r, c, false));
                     }
                 }
             }
-            return allMoves;
+            if (captureOnly) {
+                return allMoves.filter(m => m.capture);
+            }
+            // If any capture move exists, only capture moves are valid
+            const anyCaptures = allMoves.some(m => m.capture);
+            return anyCaptures ? allMoves.filter(m => m.capture) : allMoves;
         };
 
         const isValidSquare = (row, col) => row >= 0 && row < 8 && col >= 0 && col < 8;
@@ -660,14 +607,12 @@ function createCheckersView() {
         const computerMove = () => {
             if(isGameOver) return;
             
-            let allMoves = getAllPlayerMoves('black', true);
-            if(allMoves.length === 0){
-                allMoves = getAllPlayerMoves('black', false);
-            }
+            let allMoves = getAllPlayerMoves('black', false);
             
             if(allMoves.length === 0){
                 isGameOver = true;
                 statusDisplay.textContent = "Gratulacje, wygrałeś!";
+                renderBoard();
                 return;
             }
 
@@ -678,9 +623,8 @@ function createCheckersView() {
                 const captureMoves = allMoves.filter(m => m.capture);
                 bestMove = captureMoves.length > 0 ? captureMoves[Math.floor(Math.random() * captureMoves.length)] : allMoves[Math.floor(Math.random() * allMoves.length)];
             } else { // Trudny
-                // Simple heuristic: prioritize captures, then moves that lead to kinging, then random
                 const captureMoves = allMoves.filter(m => m.capture);
-                if (captureMoves.length > 0) {
+                 if (captureMoves.length > 0) {
                      bestMove = captureMoves[Math.floor(Math.random() * captureMoves.length)];
                 } else {
                     const kingMoves = allMoves.filter(m => m.toRow === 7);
@@ -691,20 +635,23 @@ function createCheckersView() {
             const pieceToMove = findPieceForMove(bestMove, 'black');
             if(pieceToMove){
                 movePiece(pieceToMove.row, pieceToMove.col, bestMove.toRow, bestMove.toCol, bestMove.capture);
-                promoteToKing(bestMove.toRow, bestMove.toCol);
                 
                 const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol, true).length > 0;
+                
+                promoteToKing(bestMove.toRow, bestMove.toCol);
+
                 if(hasMoreCaptures) {
-                    setTimeout(computerMove, 500); // Recursive call for multi-jump
-                } else {
-                    currentPlayer = 'white';
-                    renderBoard();
+                    setTimeout(() => computerMove(), 500);
+                    return;
                 }
             }
-             if(getAllPlayerMoves('white', false).length === 0 && getAllPlayerMoves('white', true).length === 0){
+            
+            currentPlayer = 'white';
+            if(getAllPlayerMoves('white', false).length === 0){
                 isGameOver = true;
                 statusDisplay.textContent = "Niestety, komputer wygrał.";
             }
+            renderBoard();
         };
         
         const findPieceForMove = (move, player) => {
@@ -712,7 +659,7 @@ function createCheckersView() {
                 for(let c=0; c<8; c++){
                     const piece = boardState[r][c];
                     if(piece && piece.player === player){
-                        const moves = getPossibleMoves(r, c, move.capture);
+                        const moves = getPossibleMoves(r, c, false);
                         if(moves.some(m => m.toRow === move.toRow && m.toCol === move.toCol)){
                             return {row: r, col: c};
                         }
@@ -731,6 +678,8 @@ function createCheckersView() {
         renderBoard();
     };
 
+    const difficultySelector = document.createElement('div');
+    difficultySelector.className = 'difficulty-selector';
     const easyBtn = createButton('Łatwy', () => startGame('Łatwy'));
     const mediumBtn = createButton('Średni', () => startGame('Średni'));
     const hardBtn = createButton('Trudny', () => startGame('Trudny'));
@@ -743,38 +692,20 @@ function createCheckersView() {
 }
 
 
-// --- GAME LOGIC (ENGLISH LEARNING) ---
 function createEnglishLearningView() {
     const container = document.createElement('div');
     container.className = 'game-container english-container';
 
-    const modeSelector = document.createElement('div');
-    modeSelector.className = 'difficulty-selector';
-    
     const gameArea = document.createElement('div');
 
-    const words = [
-        { pl: 'Kot', en: 'Cat', options: ['Dog', 'Mouse', 'Bird'] },
-        { pl: 'Pies', en: 'Dog', options: ['Cat', 'Fish', 'Lion'] },
-        { pl: 'Dom', en: 'House', options: ['Home', 'Car', 'Tree'] },
-        { pl: 'Woda', en: 'Water', options: ['Fire', 'Milk', 'Wine'] },
-        { pl: 'Chleb', en: 'Bread', options: ['Butter', 'Cheese', 'Ham'] },
-        { pl: 'Słońce', en: 'Sun', options: ['Moon', 'Star', 'Sky'] },
-        { pl: 'Książka', en: 'Book', options: ['Paper', 'Pen', 'Desk'] },
-        { pl: 'Jabłko', en: 'Apple', options: ['Orange', 'Banana', 'Pear'] },
-        { pl: 'Samochód', en: 'Car', options: ['Bus', 'Bike', 'Train'] },
-        { pl: 'Drzewo', en: 'Tree', options: ['Flower', 'Grass', 'Leaf'] }
-    ];
+    const startQuiz = (mode) => {
+        const words = [
+            { pl: 'Kot', en: 'Cat', options: ['Dog', 'Mouse', 'Bird'] }, { pl: 'Pies', en: 'Dog', options: ['Cat', 'Fish', 'Lion'] }, { pl: 'Dom', en: 'House', options: ['Home', 'Car', 'Tree'] }, { pl: 'Woda', en: 'Water', options: ['Fire', 'Milk', 'Wine'] }, { pl: 'Chleb', en: 'Bread', options: ['Butter', 'Cheese', 'Ham'] }, { pl: 'Słońce', en: 'Sun', options: ['Moon', 'Star', 'Sky'] }, { pl: 'Książka', en: 'Book', options: ['Paper', 'Pen', 'Desk'] }, { pl: 'Jabłko', en: 'Apple', options: ['Orange', 'Banana', 'Pear'] }, { pl: 'Samochód', en: 'Car', options: ['Bus', 'Bike', 'Train'] }, { pl: 'Drzewo', en: 'Tree', options: ['Flower', 'Grass', 'Leaf'] }
+        ];
+        const sentences = [
+            { pl: 'Jak się masz?', en: 'How are you?', options: ['What is your name?', 'Where are you from?', 'How old are you?'] }, { pl: 'Dziękuję', en: 'Thank you', options: ['Please', 'Sorry', 'Excuse me'] }, { pl: 'Nazywam się...', en: 'My name is...', options: ['I am...', 'I have...', 'I like...'] }, { pl: 'Która jest godzina?', en: 'What time is it?', options: ['How much is it?', 'Where is the toilet?', 'Can you help me?'] }, { pl: 'Do zobaczenia wkrótce', en: 'See you soon', options: ['Good morning', 'Good night', 'Goodbye'] }
+        ];
 
-    const sentences = [
-        { pl: 'Jak się masz?', en: 'How are you?', options: ['What is your name?', 'Where are you from?', 'How old are you?'] },
-        { pl: 'Dziękuję', en: 'Thank you', options: ['Please', 'Sorry', 'Excuse me'] },
-        { pl: 'Nazywam się...', en: 'My name is...', options: ['I am...', 'I have...', 'I like...'] },
-        { pl: 'Która jest godzina?', en: 'What time is it?', options: ['How much is it?', 'Where is the toilet?', 'Can you help me?'] },
-        { pl: 'Do zobaczenia wkrótce', en: 'See you soon', options: ['Good morning', 'Good night', 'Goodbye'] }
-    ];
-
-    function startQuiz(mode) {
         gameArea.innerHTML = '';
         const data = mode === 'words' ? words : sentences;
         let currentItem;
@@ -821,8 +752,10 @@ function createEnglishLearningView() {
 
         gameArea.append(questionDisplay, optionsContainer, statusDisplay, newButton);
         newQuestion();
-    }
-
+    };
+    
+    const modeSelector = document.createElement('div');
+    modeSelector.className = 'difficulty-selector';
     const wordsBtn = createButton('Podstawowe Słówka', () => startQuiz('words'));
     const sentencesBtn = createButton('Podstawowe Zdania', () => startQuiz('sentences'));
     modeSelector.append(wordsBtn, sentencesBtn);
@@ -836,57 +769,16 @@ function createProverbGameView() {
     const container = document.createElement('div');
     container.className = 'game-container proverb-container';
 
-    const proverbDisplay = document.createElement('p');
-    proverbDisplay.className = 'proverb-display';
-
-    const optionsContainer = document.createElement('div');
-    optionsContainer.className = 'proverb-options';
-
-    const statusDisplay = document.createElement('p');
-    statusDisplay.className = 'game-status';
-
-    const newButton = createButton('Nowe przysłowie', newProverb);
-    newButton.style.marginTop = '1rem';
-
     const proverbs = [
-        { start: 'Gdzie kucharek sześć,', correct: 'tam nie ma co jeść', incorrect: ['tam jest pyszne ciasto', 'tam każdy się naje', 'tam jest wielki bal'] },
-        { start: 'Gdy się człowiek spieszy,', correct: 'to się diabeł cieszy', incorrect: ['to zawsze zdąży', 'to na pociąg nie zdąży', 'to anioł się smuci'] },
-        { start: 'Lepszy wróbel w garści,', correct: 'niż gołąb na dachu', incorrect: ['niż orzeł na niebie', 'niż kura w zupie', 'niż nic nie mieć'] },
-        { start: 'Kto rano wstaje,', correct: 'temu Pan Bóg daje', incorrect: ['ten jest niewyspany', 'ten chodzi zły cały dzień', 'ten idzie spać wcześnie'] },
-        { start: 'Niedaleko pada jabłko', correct: 'od jabłoni', incorrect: ['od gruszy', 'od śliwki', 'w trawę'] },
-        { start: 'Apetyt rośnie', correct: 'w miarę jedzenia', incorrect: ['przed obiadem', 'na deser', 'gdy się jest głodnym'] },
-        { start: 'Bez pracy', correct: 'nie ma kołaczy', incorrect: ['nie ma pieniędzy', 'nie ma odpoczynku', 'nie ma zabawy'] },
-        { start: 'Darowanemu koniowi', correct: 'w zęby się nie zagląda', incorrect: ['grzywy się nie czesze', 'siodła się nie kupuje', 'dziękuje się grzecznie'] },
-        { start: 'Fortuna kołem się toczy,', correct: 'raz na górze, raz na dole', incorrect: ['i nigdy nie zatrzymuje', 'i toczy się szybko', 'i bywa zdradliwa'] },
-        { start: 'Jaka praca,', correct: 'taka płaca', incorrect: ['taki odpoczynek', 'taki człowiek', 'taka nuda'] },
-        { start: 'Kto pod kim dołki kopie,', correct: 'ten sam w nie wpada', incorrect: ['ten jest górnikiem', 'ten się zmęczy', 'ten nie ma czasu na nic innego'] },
-        { start: 'Nie chwal dnia', correct: 'przed zachodem słońca', incorrect: ['dopóki nie wstaniesz', 'zanim się nie skończy', 'przed południem'] },
-        { start: 'Prawdziwych przyjaciół', correct: 'poznaje się w biedzie', incorrect: ['na imprezie', 'w szkole', 'na wakacjach'] },
-        { start: 'W zdrowym ciele,', correct: 'zdrowy duch', incorrect: ['dużo siły', 'mało chorób', 'dobre samopoczucie'] },
-        { start: 'Cisza jak', correct: 'makiem zasiał', incorrect: ['w kościele', 'w bibliotece', 'w nocy'] },
-        { start: 'Co dwie głowy,', correct: 'to nie jedna', incorrect: ['to za dużo', 'to kłótnia', 'to tłok'] },
-        { start: 'Grosz do grosza,', correct: 'a będzie kokosza', incorrect: ['a będzie fortuna', 'a będzie skarb', 'a będzie bogactwo'] },
-        { start: 'Kowal zawinił,', correct: 'a Cygana powiesili', incorrect: ['a kowala ukarali', 'a koń uciekł', 'a podkowa zardzewiała'] },
-        { start: 'Kto pyta,', correct: 'nie błądzi', incorrect: ['jest ciekawy', 'dużo wie', 'nie zna odpowiedzi'] },
-        { start: 'Lepsza jest prawda,', correct: 'choćby najgorsza', incorrect: ['niż słodkie kłamstwo', 'niż miłe słowa', 'niż cisza'] },
-        { start: 'Nie ma tego złego,', correct: 'co by na dobre nie wyszło', incorrect: ['co by się nie dało naprawić', 'co by się nie skończyło', 'co by się nie powtórzyło'] },
-        { start: 'Strach ma', correct: 'wielkie oczy', incorrect: ['krótkie nogi', 'długie ręce', 'ostre zęby'] },
-        { start: 'Wilk syty', correct: 'i owca cała', incorrect: ['i baran zadowolony', 'i pasterz spokojny', 'i las cichy'] },
-        { start: 'Gdzie drwa rąbią,', correct: 'tam wióry lecą', incorrect: ['tam jest głośno', 'tam jest las', 'tam jest praca'] },
-        { start: 'Jak sobie pościelesz,', correct: 'tak się wyśpisz', incorrect: ['tak ci będzie', 'tak będziesz miał', 'takie będziesz miał sny'] },
-        { start: 'Kropla drąży', correct: 'skałę', incorrect: ['kamień', 'ziemię', 'drewno'] },
-        { start: 'Mądry Polak', correct: 'po szkodzie', incorrect: ['przed szkodą', 'zawsze', 'nigdy'] },
-        { start: 'Nie wszystko złoto,', correct: 'co się świeci', incorrect: ['co jest drogie', 'co jest w skarbcu', 'co jest piękne'] },
-        { start: 'Od przybytku', correct: 'głowa nie boli', incorrect: ['jest radość', 'jest bogactwo', 'jest szczęście'] },
-        { start: 'Ziarnko do ziarnka,', correct: 'aż zbierze się miarka', incorrect: ['aż będzie góra', 'aż będzie dużo', 'aż będzie skarb'] },
+        { start: 'Gdzie kucharek sześć,', correct: 'tam nie ma co jeść', incorrect: ['tam jest pyszne ciasto', 'tam każdy się naje', 'tam jest wielki bal'] }, { start: 'Gdy się człowiek spieszy,', correct: 'to się diabeł cieszy', incorrect: ['to zawsze zdąży', 'to na pociąg nie zdąży', 'to anioł się smuci'] }, { start: 'Lepszy wróbel w garści,', correct: 'niż gołąb na dachu', incorrect: ['niż orzeł na niebie', 'niż kura w zupie', 'niż nic nie mieć'] }, { start: 'Kto rano wstaje,', correct: 'temu Pan Bóg daje', incorrect: ['ten jest niewyspany', 'ten chodzi zły cały dzień', 'ten idzie spać wcześnie'] }, { start: 'Niedaleko pada jabłko', correct: 'od jabłoni', incorrect: ['od gruszy', 'od śliwki', 'w trawę'] }, { start: 'Apetyt rośnie', correct: 'w miarę jedzenia', incorrect: ['przed obiadem', 'na deser', 'gdy się jest głodnym'] }, { start: 'Bez pracy', correct: 'nie ma kołaczy', incorrect: ['nie ma pieniędzy', 'nie ma odpoczynku', 'nie ma zabawy'] }, { start: 'Darowanemu koniowi', correct: 'w zęby się nie zagląda', incorrect: ['grzywy się nie czesze', 'siodła się nie kupuje', 'dziękuje się grzecznie'] }, { start: 'Fortuna kołem się toczy,', correct: 'raz na górze, raz na dole', incorrect: ['i nigdy nie zatrzymuje', 'i toczy się szybko', 'i bywa zdradliwa'] }, { start: 'Jaka praca,', correct: 'taka płaca', incorrect: ['taki odpoczynek', 'taki człowiek', 'taka nuda'] }, { start: 'Kto pod kim dołki kopie,', correct: 'ten sam w nie wpada', incorrect: ['ten jest górnikiem', 'ten się zmęczy', 'ten nie ma czasu na nic innego'] }, { start: 'Nie chwal dnia', correct: 'przed zachodem słońca', incorrect: ['dopóki nie wstaniesz', 'zanim się nie skończy', 'przed południem'] }, { start: 'Prawdziwych przyjaciół', correct: 'poznaje się w biedzie', incorrect: ['na imprezie', 'w szkole', 'na wakacjach'] }, { start: 'W zdrowym ciele,', correct: 'zdrowy duch', incorrect: ['dużo siły', 'mało chorób', 'dobre samopoczucie'] }, { start: 'Cisza jak', correct: 'makiem zasiał', incorrect: ['w kościele', 'w bibliotece', 'w nocy'] }, { start: 'Co dwie głowy,', correct: 'to nie jedna', incorrect: ['to za dużo', 'to kłótnia', 'to tłok'] }, { start: 'Grosz do grosza,', correct: 'a będzie kokosza', incorrect: ['a będzie fortuna', 'a będzie skarb', 'a będzie bogactwo'] }, { start: 'Kowal zawinił,', correct: 'a Cygana powiesili', incorrect: ['a kowala ukarali', 'a koń uciekł', 'a podkowa zardzewiała'] }, { start: 'Kto pyta,', correct: 'nie błądzi', incorrect: ['jest ciekawy', 'dużo wie', 'nie zna odpowiedzi'] }, { start: 'Lepsza jest prawda,', correct: 'choćby najgorsza', incorrect: ['niż słodkie kłamstwo', 'niż miłe słowa', 'niż cisza'] }, { start: 'Nie ma tego złego,', correct: 'co by na dobre nie wyszło', incorrect: ['co by się nie dało naprawić', 'co by się nie skończyło', 'co by się nie powtórzyło'] }, { start: 'Strach ma', correct: 'wielkie oczy', incorrect: ['krótkie nogi', 'długie ręce', 'ostre zęby'] }, { start: 'Wilk syty', correct: 'i owca cała', incorrect: ['i baran zadowolony', 'i pasterz spokojny', 'i las cichy'] }, { start: 'Gdzie drwa rąbią,', correct: 'tam wióry lecą', incorrect: ['tam jest głośno', 'tam jest las', 'tam jest praca'] }, { start: 'Jak sobie pościelesz,', correct: 'tak się wyśpisz', incorrect: ['tak ci będzie', 'tak będziesz miał', 'takie będziesz miał sny'] }, { start: 'Kropla drąży', correct: 'skałę', incorrect: ['kamień', 'ziemię', 'drewno'] }, { start: 'Mądry Polak', correct: 'po szkodzie', incorrect: ['przed szkodą', 'zawsze', 'nigdy'] }, { start: 'Nie wszystko złoto,', correct: 'co się świeci', incorrect: ['co jest drogie', 'co jest w skarbcu', 'co jest piękne'] }, { start: 'Od przybytku', correct: 'głowa nie boli', incorrect: ['jest radość', 'jest bogactwo', 'jest szczęście'] }, { start: 'Ziarnko do ziarnka,', correct: 'aż zbierze się miarka', incorrect: ['aż będzie góra', 'aż będzie dużo', 'aż będzie skarb'] },
     ];
     let currentProverb;
     let recentlyUsed = [];
 
-    function newProverb() {
+    const newProverb = () => {
         let availableProverbs = proverbs.filter(p => !recentlyUsed.includes(p.start));
         if (availableProverbs.length === 0) {
-            recentlyUsed = [currentProverb.start];
+            recentlyUsed = [currentProverb ? currentProverb.start : ''];
             availableProverbs = proverbs.filter(p => !recentlyUsed.includes(p.start));
         }
         
@@ -896,6 +788,10 @@ function createProverbGameView() {
         if (recentlyUsed.length > proverbs.length / 2) {
             recentlyUsed.shift();
         }
+
+        const proverbDisplay = container.querySelector('.proverb-display');
+        const optionsContainer = container.querySelector('.proverb-options');
+        const statusDisplay = container.querySelector('.game-status');
 
         proverbDisplay.textContent = currentProverb.start + ' ...';
         statusDisplay.textContent = '';
@@ -908,29 +804,32 @@ function createProverbGameView() {
             button.classList.add('option-button');
             optionsContainer.appendChild(button);
         });
-    }
+    };
 
-    function handleAnswerClick(selectedOption, button) {
+    const handleAnswerClick = (selectedOption, button) => {
         const isCorrect = selectedOption === currentProverb.correct;
+        const optionsContainer = container.querySelector('.proverb-options');
+        const statusDisplay = container.querySelector('.game-status');
         
         Array.from(optionsContainer.children).forEach(child => {
             const btn = child;
             btn.disabled = true;
-            if (btn.textContent === currentProverb.correct) {
-                btn.classList.add('correct-answer');
-            } else if (btn.textContent === selectedOption) {
-                btn.classList.add('incorrect-answer');
-            }
+            if (btn.textContent === currentProverb.correct) btn.classList.add('correct-answer');
+            else if (btn === button) btn.classList.add('incorrect-answer');
         });
 
-        if (isCorrect) {
-            statusDisplay.textContent = 'Doskonale! Prawidłowa odpowiedź.';
-        } else {
-            statusDisplay.textContent = `Niestety, to nie to.`;
-        }
-    }
-
-    container.append(proverbDisplay, optionsContainer, statusDisplay, newButton);
+        if (isCorrect) statusDisplay.textContent = 'Doskonale! Prawidłowa odpowiedź.';
+        else statusDisplay.textContent = `Niestety, to nie to.`;
+    };
+    
+    container.innerHTML = `
+        <p class="proverb-display"></p>
+        <div class="proverb-options"></div>
+        <p class="game-status"></p>
+    `;
+    const newButton = createButton('Nowe przysłowie', newProverb);
+    newButton.style.marginTop = '1rem';
+    container.appendChild(newButton);
 
     setTimeout(newProverb, 0);
     return container;
@@ -941,18 +840,17 @@ function createMathGameView() {
     const container = document.createElement('div');
     container.className = 'game-container math-container';
 
-    const scoreDisplay = document.createElement('p');
-    scoreDisplay.className = 'game-score';
-    let score = 0;
-
     const gameArea = document.createElement('div');
-    let currentAnswer;
+    
+    const startGame = (difficulty) => {
+        let score = 0;
+        let currentAnswer;
+        gameArea.innerHTML = '';
 
-    function startGame(difficulty) {
-        gameArea.innerHTML = ''; // Clear difficulty selection
-        score = 0;
+        const scoreDisplay = document.createElement('p');
+        scoreDisplay.className = 'game-score';
+        const updateScore = () => { scoreDisplay.textContent = `Punkty: ${score}`; };
         updateScore();
-        gameArea.appendChild(scoreDisplay);
 
         const problemDisplay = document.createElement('p');
         problemDisplay.className = 'math-problem';
@@ -967,17 +865,7 @@ function createMathGameView() {
         const controls = document.createElement('div');
         controls.className = 'math-controls';
         
-        const checkButton = createButton('Sprawdź', checkAnswer);
-        const newProblemButton = createButton('Nowe zadanie', generateProblem);
-        controls.append(checkButton, newProblemButton);
-        
-        gameArea.append(problemDisplay, input, statusDisplay, controls);
-
-        function updateScore() {
-            scoreDisplay.textContent = `Punkty: ${score}`;
-        }
-        
-        function generateProblem() {
+        const generateProblem = () => {
             input.value = '';
             input.disabled = false;
             statusDisplay.textContent = '';
@@ -986,50 +874,28 @@ function createMathGameView() {
             const rand = (max, min = 1) => Math.floor(Math.random() * (max - min + 1)) + min;
             let num1, num2, operator;
 
-            if (difficulty === 'easy') { // +, - (wynik dodatni), liczby do 20
-                num1 = rand(20);
-                num2 = rand(20);
-                if (Math.random() > 0.5) {
-                    operator = '+';
-                    currentAnswer = num1 + num2;
-                } else {
-                    operator = '-';
-                    if (num1 < num2) [num1, num2] = [num2, num1]; // swap to avoid negative
-                    currentAnswer = num1 - num2;
-                }
-            } else if (difficulty === 'medium') { // +, -, * | liczby do 100 dla +/- i do 12 dla *
+            if (difficulty === 'easy') {
+                num1 = rand(20); num2 = rand(20);
+                if (Math.random() > 0.5) { operator = '+'; currentAnswer = num1 + num2; } 
+                else { operator = '-'; if (num1 < num2) [num1, num2] = [num2, num1]; currentAnswer = num1 - num2; }
+            } else if (difficulty === 'medium') {
                  const opType = rand(3);
-                 if (opType === 1) { // +
-                    num1 = rand(100); num2 = rand(100); operator = '+'; currentAnswer = num1 + num2;
-                 } else if (opType === 2) { // -
-                    num1 = rand(100); num2 = rand(100); if(num1<num2) [num1, num2] = [num2, num1]; operator = '-'; currentAnswer = num1 - num2;
-                 } else { // *
-                    num1 = rand(12); num2 = rand(12); operator = '*'; currentAnswer = num1 * num2;
-                 }
-            } else { // hard: +, -, *, / (bez reszty)
+                 if (opType === 1) { num1 = rand(100); num2 = rand(100); operator = '+'; currentAnswer = num1 + num2; } 
+                 else if (opType === 2) { num1 = rand(100); num2 = rand(100); if(num1<num2) [num1, num2] = [num2, num1]; operator = '-'; currentAnswer = num1 - num2; } 
+                 else { num1 = rand(12); num2 = rand(12); operator = '*'; currentAnswer = num1 * num2; }
+            } else {
                 const opType = rand(4);
-                 if (opType === 1) { // +
-                    num1 = rand(200, 50); num2 = rand(200, 50); operator = '+'; currentAnswer = num1 + num2;
-                 } else if (opType === 2) { // -
-                    num1 = rand(300, 20); num2 = rand(200, 20); if(num1<num2) [num1, num2] = [num2, num1]; operator = '-'; currentAnswer = num1 - num2;
-                 } else if (opType === 3) { // *
-                    num1 = rand(20, 5); num2 = rand(20, 5); operator = '*'; currentAnswer = num1 * num2;
-                 } else { // /
-                    num2 = rand(15, 2);
-                    num1 = num2 * rand(15, 2);
-                    operator = '/';
-                    currentAnswer = num1 / num2;
-                 }
+                 if (opType === 1) { num1 = rand(200, 50); num2 = rand(200, 50); operator = '+'; currentAnswer = num1 + num2; } 
+                 else if (opType === 2) { num1 = rand(300, 20); num2 = rand(200, 20); if(num1<num2) [num1, num2] = [num2, num1]; operator = '-'; currentAnswer = num1 - num2; } 
+                 else if (opType === 3) { num1 = rand(20, 5); num2 = rand(20, 5); operator = '*'; currentAnswer = num1 * num2; } 
+                 else { num2 = rand(15, 2); num1 = num2 * rand(15, 2); operator = '/'; currentAnswer = num1 / num2; }
             }
             problemDisplay.textContent = `${num1} ${operator.replace('*', '×').replace('/', '÷')} ${num2} = ?`;
-        }
+        };
 
-        function checkAnswer() {
+        const checkAnswer = () => {
             const userAnswer = parseInt(input.value, 10);
-            if (isNaN(userAnswer)) {
-                statusDisplay.textContent = 'Proszę wpisać liczbę.';
-                return;
-            }
+            if (isNaN(userAnswer)) { statusDisplay.textContent = 'Proszę wpisać liczbę.'; return; }
             if (userAnswer === currentAnswer) {
                 statusDisplay.textContent = 'Dobrze!';
                 input.classList.add('correct');
@@ -1042,12 +908,15 @@ function createMathGameView() {
                 input.classList.add('incorrect');
                 input.disabled = true;
             }
-        }
+        };
         
+        const checkButton = createButton('Sprawdź', checkAnswer);
+        const newProblemButton = createButton('Nowe zadanie', generateProblem);
+        controls.append(checkButton, newProblemButton);
+        gameArea.append(scoreDisplay, problemDisplay, input, statusDisplay, controls);
         generateProblem();
-    }
+    };
     
-    // Initial difficulty selection
     const difficultySelector = document.createElement('div');
     difficultySelector.className = 'difficulty-selector';
     const easyBtn = createButton('Łatwy', () => startGame('easy'));
@@ -1063,23 +932,11 @@ function createMathGameView() {
 
 
 // --- UTILITY FUNCTIONS ---
-function createButton(text, onClick, iconClass) {
+function createButton(text, onClick) {
     const button = document.createElement('button');
     button.className = 'button';
-    
-    if (iconClass) {
-        const icon = document.createElement('span');
-        icon.className = `icon ${iconClass}`;
-        button.appendChild(icon);
-    }
-    
-    const buttonText = document.createElement('span');
-    buttonText.textContent = text;
-    button.appendChild(buttonText);
-
-    if (onClick) {
-        button.onclick = onClick;
-    }
+    button.textContent = text;
+    if (onClick) button.onclick = onClick;
     return button;
 }
 
@@ -1088,15 +945,7 @@ function createNavCard(text, icon, onClick) {
     card.className = 'card nav-card';
     card.onclick = onClick;
     card.setAttribute('aria-label', text);
-
-    const cardIcon = document.createElement('div');
-    cardIcon.className = 'nav-card-icon';
-    cardIcon.textContent = icon;
-
-    const cardText = document.createElement('p');
-    cardText.textContent = text;
-
-    card.append(cardIcon, cardText);
+    card.innerHTML = `<div class="nav-card-icon">${icon}</div><p>${text}</p>`;
     return card;
 }
 
@@ -1105,18 +954,13 @@ function createFooterNav() {
     footer.className = 'app-footer';
 
     const scrollToSection = (sectionId) => {
-        const section = document.getElementById(sectionId);
-        if (section) {
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     const factButton = createButton('💡', () => scrollToSection('fact-section'));
     factButton.setAttribute('aria-label', 'Przejdź do ciekawostki');
-    
     const gamesButton = createButton('🎲', () => scrollToSection('games-section'));
     gamesButton.setAttribute('aria-label', 'Przejdź do gier');
-
     const remindersButton = createButton('🔔', () => scrollToSection('reminders-section'));
     remindersButton.setAttribute('aria-label', 'Przejdź do przypomnień');
     
@@ -1129,9 +973,7 @@ function createBackToTopButton() {
     button.textContent = '🔼';
     button.className = 'back-to-top-btn';
     button.setAttribute('aria-label', 'Wróć na górę');
-    button.onclick = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    button.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
     return button;
 }
 
@@ -1144,16 +986,13 @@ function initializeApp() {
     createFullUI();
     fetchDailyFact();
     loadReminders();
-    render(); // To initially render the loaded reminders
+    render();
 
     const backToTopBtn = document.querySelector('.back-to-top-btn');
     if (backToTopBtn) {
         window.onscroll = () => {
-            if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
-                backToTopBtn.classList.add('visible');
-            } else {
-                backToTopBtn.classList.remove('visible');
-            }
+            const isVisible = (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100);
+            backToTopBtn.classList.toggle('visible', isVisible);
         };
     }
 }
