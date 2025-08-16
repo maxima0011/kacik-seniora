@@ -332,14 +332,14 @@ function startMemoryGame() {
 
     // NAPRAWIONE, STABILNE LINKI DO OBRAZKÓW
     const ANIMAL_IMAGES = [
-        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1529778873920-4da4926a72c2?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1583337130417-2346a1be28a1?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1596854407944-bf87f6fdd49e?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1574158622682-e40e6984100d?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1555169062-013468b47731?q=80&w=200&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1517849845537-4d257902454a?q=80&w=200&auto=format&fit=crop'
+        'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=200&auto=format&fit=crop', // Fox
+        'https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=200&auto=format&fit=crop', // Dog
+        'https://images.unsplash.com/photo-1570458425275-6b7051a1c435?q=80&w=200&auto=format&fit=crop', // Cat
+        'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?q=80&w=200&auto=format&fit=crop', // Rabbit
+        'https://images.unsplash.com/photo-1527118732049-c88155f2107c?q=80&w=200&auto=format&fit=crop', // Panda
+        'https://images.unsplash.com/photo-1504450874802-0ba2bcd9b5ae?q=80&w=200&auto=format&fit=crop', // Squirrel
+        'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=200&auto=format&fit=crop', // Hedgehog
+        'https://images.unsplash.com/photo-1546182990-dffeaf781f3b?q=80&w=200&auto=format&fit=crop'  // Lion
     ];
     const cardValues = [...ANIMAL_IMAGES, ...ANIMAL_IMAGES].sort(() => 0.5 - Math.random());
 
