@@ -38,7 +38,6 @@ async function fetchDailyFact() {
     state.factLoading = true;
     render();
     try {
-        // OSTATECZNA POPRAWKA: Używamy najnowszej, poprawnej składni biblioteki Google AI
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: 'Opowiedz mi krótką, interesującą i pozytywną ciekawostkę, która spodobałaby się seniorowi. Maksymalnie 30 słów.',
@@ -429,6 +428,7 @@ function createCheckersView() {
         let currentPlayer = 'white';
         let selectedPiece = null;
         let isGameOver = false;
+        let mustCapture = false;
 
         const initializeBoard = () => {
             board.innerHTML = '';
@@ -468,10 +468,10 @@ function createCheckersView() {
                     if (piece.isKing) pieceElement.classList.add('king');
                     square.appendChild(pieceElement);
 
-                    if (piece.player === currentPlayer) {
+                    if (piece.player === currentPlayer && !isGameOver) {
                         square.onclick = () => onPieceClick(row, col);
                     }
-                } else if(selectedPiece){
+                } else if(selectedPiece && !isGameOver){
                      square.onclick = () => onSquareClick(row, col);
                 }
             });
@@ -483,9 +483,9 @@ function createCheckersView() {
             
             const piece = boardState[row][col];
             if (piece && piece.player === currentPlayer) {
-                const allCaptureMoves = getAllPlayerMoves(currentPlayer).filter(m => m.capture);
+                 const allCaptureMoves = getAllPlayerMoves(currentPlayer, true);
                 if (allCaptureMoves.length > 0) {
-                    const pieceCaptureMoves = getPossibleMoves(row, col).filter(m => m.capture);
+                    const pieceCaptureMoves = getPossibleMoves(row, col, true);
                     if (pieceCaptureMoves.length === 0) {
                         statusDisplay.textContent = 'Bicie jest obowiązkowe!';
                         return;
@@ -493,12 +493,12 @@ function createCheckersView() {
                 }
                 
                 selectedPiece = { row, col };
-                renderBoard(); 
+                renderBoard(); // Re-render to clear previous highlights
                 board.querySelector(`[data-row='${row}'][data-col='${col}']`).classList.add('selected');
                 
                 const movesToHighlight = (allCaptureMoves.length > 0) 
-                    ? getPossibleMoves(row, col).filter(m => m.capture) 
-                    : getPossibleMoves(row, col);
+                    ? getPossibleMoves(row, col, true)
+                    : getPossibleMoves(row, col, false);
 
                 movesToHighlight.forEach(move => {
                     const targetSquare = board.querySelector(`[data-row='${move.toRow}'][data-col='${move.toCol}']`);
@@ -510,17 +510,19 @@ function createCheckersView() {
         const onSquareClick = (row, col) => {
             if (!selectedPiece || isGameOver) return;
             
-            const allCaptureMoves = getAllPlayerMoves(currentPlayer).filter(m => m.capture);
+            const allCaptureMoves = getAllPlayerMoves(currentPlayer, true);
             const moves = (allCaptureMoves.length > 0) 
-                ? getPossibleMoves(selectedPiece.row, selectedPiece.col).filter(m => m.capture)
-                : getPossibleMoves(selectedPiece.row, selectedPiece.col);
+                ? getPossibleMoves(selectedPiece.row, selectedPiece.col, true)
+                : getPossibleMoves(selectedPiece.row, selectedPiece.col, false);
 
             const move = moves.find(m => m.toRow === row && m.toCol === col);
 
             if (move) {
                 movePiece(selectedPiece.row, selectedPiece.col, row, col);
+                const captured = move.capture;
+                promoteToKing(row, col);
                 
-                const hasMoreCaptures = move.capture && getPossibleMoves(row, col).filter(m => m.capture).length > 0;
+                const hasMoreCaptures = captured && getPossibleMoves(row, col, true).length > 0;
                 if (hasMoreCaptures) {
                     selectedPiece = { row, col };
                     renderBoard();
@@ -529,7 +531,6 @@ function createCheckersView() {
                 }
                 
                 selectedPiece = null;
-                promoteToKing(row, col);
                 currentPlayer = 'black';
                 renderBoard();
                 setTimeout(computerMove, 500);
@@ -559,7 +560,7 @@ function createCheckersView() {
             }
         };
 
-        const getPossibleMoves = (row, col) => {
+        const getPossibleMoves = (row, col, captureOnly) => {
             const moves = [];
             const piece = boardState[row][col];
             if (!piece) return moves;
@@ -571,9 +572,9 @@ function createCheckersView() {
                 const newCol = col + dc;
 
                 if (isValidSquare(newRow, newCol)) {
-                    if (!boardState[newRow][newCol]) {
+                    if (!boardState[newRow][newCol] && !captureOnly) {
                         moves.push({ toRow: newRow, toCol: newCol, capture: false });
-                    } else if (boardState[newRow][newCol].player !== piece.player) {
+                    } else if (boardState[newRow][newCol] && boardState[newRow][newCol].player !== piece.player) {
                         const jumpRow = newRow + dr;
                         const jumpCol = newCol + dc;
                         if (isValidSquare(jumpRow, jumpCol) && !boardState[jumpRow][jumpCol]) {
@@ -585,13 +586,13 @@ function createCheckersView() {
             return moves;
         };
         
-        const getAllPlayerMoves = (player) => {
+        const getAllPlayerMoves = (player, captureOnly) => {
             let allMoves = [];
             for(let r=0; r<8; r++){
                 for(let c=0; c<8; c++){
                     const piece = boardState[r][c];
                     if(piece && piece.player === player){
-                        allMoves.push(...getPossibleMoves(r,c).map(move => ({...move, fromRow: r, fromCol: c})));
+                        allMoves.push(...getPossibleMoves(r,c, captureOnly).map(move => ({...move, fromRow: r, fromCol: c})));
                     }
                 }
             }
@@ -603,9 +604,8 @@ function createCheckersView() {
         const computerMove = () => {
             if(isGameOver) return;
             
-            let allMoves = getAllPlayerMoves('black');
-            const captureMoves = allMoves.filter(m => m.capture);
-            const validMoves = captureMoves.length > 0 ? captureMoves : allMoves;
+            let allCaptureMoves = getAllPlayerMoves('black', true);
+            let validMoves = allCaptureMoves.length > 0 ? allCaptureMoves : getAllPlayerMoves('black', false);
 
             if(validMoves.length === 0){
                 isGameOver = true;
@@ -617,25 +617,35 @@ function createCheckersView() {
             let bestMove;
             if (difficulty === 'Łatwy') {
                 bestMove = validMoves[Math.floor(Math.random() * validMoves.length)];
-            } else if (difficulty === 'Średni') {
-                bestMove = validMoves[Math.floor(Math.random() * validMoves.length)]; 
-            } else { // Trudny
-                bestMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+            } else { // Średni i Trudny (priorytet bicia jest już w `validMoves`)
+                // Prosta heurystyka dla Trudnego: unikanie głupich ruchów, dążenie do bycia damką
+                 if (difficulty === 'Trudny') {
+                    const goodMoves = validMoves.filter(m => {
+                        // Unikaj ruchu na krawędź jeśli nie jest to konieczne
+                        if(m.toCol === 0 || m.toCol === 7) return false;
+                        // Dąż do przodu
+                        if(m.toRow > m.fromRow) return true;
+                        return false;
+                    });
+                     bestMove = goodMoves.length > 0 ? goodMoves[Math.floor(Math.random() * goodMoves.length)] : validMoves[Math.floor(Math.random() * validMoves.length)];
+                } else {
+                    bestMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                }
             }
             
             movePiece(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
-            
-            const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol).filter(m => m.capture).length > 0;
-            
             promoteToKing(bestMove.toRow, bestMove.toCol);
-
+            
+            const hasMoreCaptures = bestMove.capture && getPossibleMoves(bestMove.toRow, bestMove.toCol, true).length > 0;
+            
             if(hasMoreCaptures) {
-                setTimeout(() => computerMove(), 500);
-                return;
+                 renderBoard();
+                 setTimeout(() => computerMove(), 500);
+                 return;
             }
             
             currentPlayer = 'white';
-            if(getAllPlayerMoves('white').length === 0){
+            if(getAllPlayerMoves('white', false).length === 0 && getAllPlayerMoves('white', true).length === 0){
                 isGameOver = true;
                 statusDisplay.textContent = "Niestety, komputer wygrał.";
             }
